@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"tracker/internal/config"
 	"tracker/internal/database"
 	"tracker/internal/handler"
 	"tracker/internal/middleware"
@@ -42,12 +42,12 @@ func main() {
 	router.Post("/api/tasks", taskHandler.CreateTask)
 
 	server := &http.Server{
-		Addr:    ":6969",
+		Addr:    config.DefaultServerPort,
 		Handler: router,
 	}
 
 	go func() {
-		log.Println("starting server on localhost:6969")
+		log.Printf(`starting server on localhost%s`, config.DefaultServerPort)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server failed: %v", err)
 		}
@@ -59,7 +59,7 @@ func main() {
 
 	log.Println("shutting down server")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), config.ShutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"tracker/internal/model"
 	"tracker/internal/repository"
 
@@ -81,13 +82,12 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if input.Title == "" {
-		http.Error(w, "Title is required", http.StatusBadRequest)
+	if err := validateTask(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	result, err := h.repo.Create(ctx, &input)
-
 	if err != nil {
 		log.Printf("insert error: %v", err)
 		http.Error(w, "database error", http.StatusInternalServerError)
@@ -113,4 +113,16 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(task)
+}
+
+func validateTask(task *model.Task) error {
+	if strings.TrimSpace(task.Title) == "" {
+		return ErrTitleRequired
+	}
+
+	if len(task.Title) > model.TitleMaxLength {
+		return ErrTitleTooLong
+	}
+
+	return nil
 }

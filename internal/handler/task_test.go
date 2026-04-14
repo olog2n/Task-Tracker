@@ -2,10 +2,12 @@ package handler
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"tracker/internal/mocks"
 	"tracker/internal/model"
@@ -100,4 +102,37 @@ func TestGetTasks_Empty(t *testing.T) {
 	if len(tasks) != 0 {
 		t.Errorf("expected 0 task, got %d", len(tasks))
 	}
+}
+
+func TestCreateTask_Validation(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		wantStatus int
+	}{
+		{"empty title", `{"title":""}`, http.StatusBadRequest},
+		{"title too long", `{"title":"` + strings.Repeat("a", 101) + `"}`, http.StatusBadRequest},
+		{"valid", `{"title":"Test","author":"Me"}`, http.StatusCreated},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo := &mocks.MockTaskRepository{
+				CreateFunc: func(ctx context.Context, task *model.Task) (sql.Result, error) {
+					return mocks.NewResult(1, 1), nil
+				},
+			}
+
+			handler := NewTaskHandler(mockRepo)
+			req := httptest.NewRequest(http.MethodPost, "/api/tasks", strings.NewReader(tt.input))
+			w := httptest.NewRecorder()
+
+			handler.CreateTask(w, req)
+
+			if w.Code != tt.wantStatus {
+				t.Errorf("expected %d, got %d", tt.wantStatus, w.Code)
+			}
+		})
+	}
+
 }

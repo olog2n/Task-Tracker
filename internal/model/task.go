@@ -12,14 +12,6 @@ var ErrUnknownStatus = fmt.Errorf("unknown task status")
 type TaskStatus int
 type TaskID int
 
-const (
-	StatusBacklog TaskStatus = iota
-	StatusInProgress
-	StatusReview
-	StatusDone
-	StatusCancelled
-)
-
 var statusName = map[TaskStatus]string{
 	StatusBacklog:    "backlog",
 	StatusInProgress: "in_progress",
