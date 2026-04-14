@@ -35,6 +35,19 @@ func New(ctx context.Context, dsn string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
 
+	_, err = db.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			last_login DATETIME DEFAULT CURRENT_TIMESTAMP,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			email TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL
+		)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create table: %w", err)
+	}
+
 	log.Println("database initialized")
 	return db, nil
 }

@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"tracker/internal/model"
 	"tracker/internal/repository"
+	"tracker/internal/validator"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -82,7 +82,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateTask(&input); err != nil {
+	if err := validator.ValidateTask(&input); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -113,16 +113,4 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(task)
-}
-
-func validateTask(task *model.Task) error {
-	if strings.TrimSpace(task.Title) == "" {
-		return ErrTitleRequired
-	}
-
-	if len(task.Title) > model.TitleMaxLength {
-		return ErrTitleTooLong
-	}
-
-	return nil
 }
