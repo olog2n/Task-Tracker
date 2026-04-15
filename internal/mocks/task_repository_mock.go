@@ -16,7 +16,7 @@ func (m *MockTaskRepository) GetAll(ctx context.Context) ([]model.Task, error) {
 	return m.GetAllFunc(ctx)
 }
 
-func (m *MockTaskRepository) GetById(ctx context.Context, id int) (*model.Task, error) {
+func (m *MockTaskRepository) GetByID(ctx context.Context, id int) (*model.Task, error) {
 	return m.GetByIDFunc(ctx, id)
 }
 

@@ -23,13 +23,11 @@ func (rw *responseWriter) WriteHeader(code int) {
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-
 		rw := newResponseWriter(w)
 		next.ServeHTTP(rw, r)
-
 		log.Printf(
 			"[%s] %s %s %d %v",
-			time.Now().Format(time.RFC850), //"Monday, 02-Jan-06 15:04:05 MST"
+			time.Now().Format(time.RFC850),
 			r.Method,
 			r.URL.Path,
 			rw.statusCode,

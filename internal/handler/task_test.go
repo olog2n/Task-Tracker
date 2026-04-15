@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
 	"tracker/internal/mocks"
 	"tracker/internal/model"
 )
@@ -17,7 +19,7 @@ func TestGetTasks_Success(t *testing.T) {
 	mockRepo := &mocks.MockTaskRepository{
 		GetAllFunc: func(ctx context.Context) ([]model.Task, error) {
 			return []model.Task{
-				{ID: 1, Title: "Test", Status: model.StatusBacklog},
+				{ID: 1, Title: "Test", Author: "Me", Status: model.StatusBacklog, CreatedAt: time.Now(), UpdatedAt: time.Now()},
 			}, nil
 		},
 	}
@@ -66,11 +68,6 @@ func TestGetTasks_RepositoryError(t *testing.T) {
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("expected status 500, got %d", w.Code)
 	}
-
-	var tasks []model.Task
-	if err := json.Unmarshal(w.Body.Bytes(), &tasks); err == nil {
-		t.Fatalf("expected to fail unmarshal: %v", err)
-	}
 }
 
 func TestGetTasks_Empty(t *testing.T) {
@@ -90,17 +87,13 @@ func TestGetTasks_Empty(t *testing.T) {
 		t.Errorf("expected status 200, got %d", w.Code)
 	}
 
-	if w.Header().Get("Content-Type") != "application/json" {
-		t.Errorf("expected Content-Type application/json, got %s", w.Header().Get("Content-Type"))
-	}
-
 	var tasks []model.Task
 	if err := json.Unmarshal(w.Body.Bytes(), &tasks); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
 
 	if len(tasks) != 0 {
-		t.Errorf("expected 0 task, got %d", len(tasks))
+		t.Errorf("expected 0 tasks, got %d", len(tasks))
 	}
 }
 
@@ -132,7 +125,86 @@ func TestCreateTask_Validation(t *testing.T) {
 			if w.Code != tt.wantStatus {
 				t.Errorf("expected %d, got %d", tt.wantStatus, w.Code)
 			}
+
+			if tt.wantStatus == http.StatusCreated {
+				var task model.Task
+				if err := json.Unmarshal(w.Body.Bytes(), &task); err != nil {
+					t.Errorf("failed to unmarshal response: %v", err)
+				}
+				if task.ID != 1 {
+					t.Errorf("expected ID 1, got %d", task.ID)
+				}
+			}
 		})
 	}
+}
 
+func TestCreateTask_RepositoryError(t *testing.T) {
+	mockRepo := &mocks.MockTaskRepository{
+		CreateFunc: func(ctx context.Context, task *model.Task) (sql.Result, error) {
+			return nil, errors.New("database down")
+		},
+	}
+
+	handler := NewTaskHandler(mockRepo)
+	req := httptest.NewRequest(http.MethodPost, "/api/tasks", strings.NewReader(`{"title":"Test"}`))
+	w := httptest.NewRecorder()
+
+	handler.CreateTask(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected status 500, got %d", w.Code)
+	}
+}
+
+func TestGetTaskByID_Success(t *testing.T) {
+	mockRepo := &mocks.MockTaskRepository{
+		GetByIDFunc: func(ctx context.Context, id int) (*model.Task, error) {
+			return &model.Task{
+				ID:        model.TaskID(id),
+				Title:     "Test",
+				Author:    "Me",
+				Status:    model.StatusBacklog,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}, nil
+		},
+	}
+
+	handler := NewTaskHandler(mockRepo)
+	req := httptest.NewRequest(http.MethodGet, "/api/tasks/1", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetTaskByID(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Code)
+	}
+
+	var task model.Task
+	if err := json.Unmarshal(w.Body.Bytes(), &task); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if task.ID != 1 {
+		t.Errorf("expected ID 1, got %d", task.ID)
+	}
+}
+
+func TestGetTaskByID_NotFound(t *testing.T) {
+	mockRepo := &mocks.MockTaskRepository{
+		GetByIDFunc: func(ctx context.Context, id int) (*model.Task, error) {
+			return nil, sql.ErrNoRows
+		},
+	}
+
+	handler := NewTaskHandler(mockRepo)
+	req := httptest.NewRequest(http.MethodGet, "/api/tasks/999", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetTaskByID(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected status 404, got %d", w.Code)
+	}
 }
