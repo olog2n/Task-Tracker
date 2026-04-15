@@ -12,10 +12,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"tracker/internal/auth"
 	"tracker/internal/config"
 	"tracker/internal/database"
 	"tracker/internal/handler"
 	"tracker/internal/repository"
+	"tracker/internal/traceMiddleware"
 )
 
 func main() {
@@ -29,8 +31,17 @@ func main() {
 	}
 	defer db.Close()
 
-	repo := repository.NewRegistrationRepository(db)
-	taskHandler := handler.NewTaskHandler(repo)
+	taskRepo := repository.NewTaskRepository(db)
+	userRepo := repository.NewUserRepository(db)
+
+	metadata := handler.NewMetadataService("0.1.0", time.Now().Format(time.RFC822Z))
+	jwtService := auth.NewJWTService(cfg.Auth.JWTSecret, cfg.Auth.JWTExpiry)
+
+	healthHandler := handler.NewHealthHandler(metadata, db)
+	versionHandler := handler.NewVersionHandler(metadata)
+
+	taskHandler := handler.NewTaskHandler(taskRepo)
+	authHandler := handler.NewAuthHandler(userRepo, jwtService)
 
 	r := chi.NewRouter()
 
@@ -40,17 +51,26 @@ func main() {
 	r.Use(middleware.Logger)                    // Chi-логгер (можно заменить на наш)
 	r.Use(middleware.Recoverer)                 // Паник-рекувери
 	r.Use(middleware.Timeout(60 * time.Second)) // Таймаут на запрос
+	r.Use(traceMiddleware.Logger)
+
+	r.Route("/api/auth", func(r chi.Router) {
+		r.Post("/register", authHandler.Register)
+		r.Post("/login", authHandler.Login)
+		// r.Post("/logout", authHandler.Logout)
+		// r.Post("/refresh", authHandler.RefreshToken)
+	})
 
 	r.Route("/api", func(r chi.Router) {
+		r.Use(traceMiddleware.AuthMiddleware(jwtService))
+
 		r.Get("/tasks", taskHandler.GetTasks)
 		r.Post("/tasks", taskHandler.CreateTask)
 		r.Get("/tasks/{id}", taskHandler.GetTaskByID)
 	})
 
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
+	r.Get("/health", healthHandler.Live)
+	r.Get("/ready", healthHandler.Ready)
+	r.Get("/version", versionHandler.ServeHTTP)
 
 	server := &http.Server{
 		Addr:         cfg.Server.Port,
