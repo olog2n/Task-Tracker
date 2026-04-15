@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -139,11 +140,18 @@ func validate(cfg *Config) error {
 	if cfg.Database.Driver == "" {
 		return fmt.Errorf("database.driver is required")
 	}
+
 	if cfg.Auth.JWTSecret == "" {
 		return fmt.Errorf("auth.jwt_secret is required")
 	}
+
 	if cfg.Server.Port == "" {
 		return fmt.Errorf("server.port is required")
 	}
+
+	if !strings.Contains(cfg.Server.Port, ":") {
+		cfg.Server.Port = ":" + cfg.Server.Port
+	}
+
 	return nil
 }

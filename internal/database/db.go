@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"fmt"
 	"log"
 	"strings"
@@ -18,7 +19,11 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/database/sqlite"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
+
+//go:embed migrations
+var migrationsFS embed.FS
 
 func New(ctx context.Context, driver, dsn string) (*sql.DB, error) {
 	if !isValidDriver(driver) {
@@ -47,20 +52,39 @@ func New(ctx context.Context, driver, dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
+// Migrate применяет миграции из embed-filesystem
 func Migrate(driver, dsn string) error {
-	migrationsPath := fmt.Sprintf("file://internal/database/migrations/%s", driver)
+	// 1. Путь внутри embed.FS
+	migrationsSubpath := "sqlite" // Для SQLite используем универсальные миграции
+	// Если нужны отдельные папки для PostgreSQL/MySQL:
+	// if driver != "sqlite" {
+	//     migrationsSubpath = driver
+	// }
 
+	// 2. Создаём источник миграций из embed.FS
+	sourceDriver, err := iofs.New(migrationsFS, fmt.Sprintf("migrations/%s", migrationsSubpath))
+	if err != nil {
+		return fmt.Errorf("failed to init migrate source: %w", err)
+	}
+
+	// 3. Формируем DSN для драйвера БД (конвертация форматов)
 	migrateDSN, err := buildMigrateDSN(driver, dsn)
 	if err != nil {
 		return fmt.Errorf("failed to build migrate DSN: %w", err)
 	}
 
-	m, err := migrate.New(migrationsPath, migrateDSN)
+	// 👇 4. Используем NewWithSourceInstance (источник - инстанс, БД - строка!)
+	m, err := migrate.NewWithSourceInstance(
+		"iofs",       // 👈 Источник: embed-filesystem
+		sourceDriver, // 👈 Инстанс источника
+		migrateDSN,   // 👈 DSN для БД как строка (не инстанс!)
+	)
 	if err != nil {
 		return fmt.Errorf("failed to init migrate: %w", err)
 	}
 	defer m.Close()
 
+	// 5. Применяем миграции
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
@@ -69,28 +93,25 @@ func Migrate(driver, dsn string) error {
 	return nil
 }
 
-func buildMigrateDSN(driver, dsn string) (string, error) {
+// buildMigrateDSN строит DSN для драйвера БД (не для источника!)
+func buildMigrateDSN(driver, appDSN string) (string, error) {
 	switch driver {
 	case "sqlite":
-		if !strings.HasPrefix(dsn, "sqlite://") {
-			return "sqlite://" + dsn, nil
-		}
-		return dsn, nil
-
+		// Убираем "file:" префикс для migrate
+		dbPath := strings.TrimPrefix(appDSN, "file:")
+		return "sqlite://" + dbPath, nil
 	case "postgres":
-		if !strings.HasPrefix(dsn, "postgres://") && !strings.HasPrefix(dsn, "postgresql://") {
-			return "postgres://" + dsn, nil
+		if !strings.HasPrefix(appDSN, "postgres://") && !strings.HasPrefix(appDSN, "postgresql://") {
+			return "postgres://" + appDSN, nil
 		}
-		return dsn, nil
-
+		return appDSN, nil
 	case "mysql":
-		if !strings.HasPrefix(dsn, "mysql://") {
-			return "mysql://" + dsn, nil
+		if !strings.HasPrefix(appDSN, "mysql://") {
+			return "mysql://" + appDSN, nil
 		}
-		return dsn, nil
-
+		return appDSN, nil
 	default:
-		return "", fmt.Errorf("unsupported driver for migrations: %s", driver)
+		return "", fmt.Errorf("unsupported driver: %s", driver)
 	}
 }
 
