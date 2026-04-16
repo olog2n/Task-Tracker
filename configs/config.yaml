@@ -25,6 +25,7 @@ auth:
   jwt_secret: ""      # .env
   jwt_algorithm: "HS256" # HS256 | ES256 | RS256
   jwt_expiry: 24h
+  jwt_refresh_expiry: 168h #Refresh token - 7 days
 
 logging:
   level: info

@@ -12,6 +12,7 @@ import (
 
 	"tracker/internal/model"
 	"tracker/internal/repository"
+	"tracker/internal/traceMiddleware"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -129,6 +130,112 @@ func (h *TaskHandler) GetTaskByID(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(task)
+}
+
+// UpdateTask обновляет задачу
+func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Получаем ID из path-параметра
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем существование задачи
+	existing, err := h.repo.GetByID(ctx, id)
+	if err == sql.ErrNoRows {
+		http.Error(w, "task not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("query error: %v", err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Парсим тело запроса
+	var input model.Task
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Валидация
+	if err := validateTask(&input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Сохраняем ID и обновляем поля
+	input.ID = existing.ID
+	input.CreatedAt = existing.CreatedAt
+	input.UpdatedAt = time.Now()
+
+	// 👇 Проверка прав (автор может редактировать)
+	userID, ok := traceMiddleware.GetUserIDFromContext(r)
+	if ok && userID != 0 {
+		// Если задача привязана к пользователю — проверяем
+		// Пока просто логируем, полную проверку добавим позже
+		_ = userID
+	}
+
+	// Обновляем в БД
+	if err := h.repo.Update(ctx, &input); err != nil {
+		log.Printf("update error: %v", err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(input)
+}
+
+// DeleteTask удаляет задачу
+func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Получаем ID из path-параметра
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем существование
+	_, err = h.repo.GetByID(ctx, id)
+	if err == sql.ErrNoRows {
+		http.Error(w, "task not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("query error: %v", err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Удаляем из БД
+	if err := h.repo.Delete(ctx, id); err != nil {
+		log.Printf("delete error: %v", err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func validateTask(task *model.Task) error {

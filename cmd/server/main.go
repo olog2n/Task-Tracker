@@ -36,7 +36,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 
 	metadata := handler.NewMetadataService("0.1.0", time.Now().Format(time.RFC822Z))
-	jwtService := auth.NewJWTService(cfg.Auth.JWTSecret, cfg.Auth.JWTExpiry)
+	jwtService := auth.NewJWTService(cfg.Auth.JWTSecret, cfg.Auth.JWTExpiry, cfg.Auth.JWTRefreshExpiry)
 
 	// testClaims, err := jwtService.ValidateToken()
 	// if err != nil {
@@ -64,15 +64,19 @@ func main() {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
 		// r.Post("/logout", authHandler.Logout)
-		// r.Post("/refresh", authHandler.RefreshToken)
+		r.Post("/refresh", authHandler.RefreshToken)
 	})
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(traceMiddleware.AuthMiddleware(jwtService))
 
-		r.Get("/tasks", taskHandler.GetTasks)
-		r.Post("/tasks", taskHandler.CreateTask)
-		r.Get("/tasks/{id}", taskHandler.GetTaskByID)
+		r.Route("/tasks", func(r chi.Router) {
+			r.Post("/", taskHandler.CreateTask)
+			r.Get("/", taskHandler.GetTasks)
+			r.Get("/{id}", taskHandler.GetTaskByID)
+			r.Put("/{id}", taskHandler.UpdateTask)
+			r.Delete("/{id}", taskHandler.DeleteTask)
+		})
 	})
 
 	r.Get("/health", healthHandler.Live)

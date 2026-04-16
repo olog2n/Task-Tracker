@@ -11,6 +11,8 @@ type TaskRepository interface {
 	GetAll(ctx context.Context) ([]model.Task, error)
 	GetByID(ctx context.Context, id int) (*model.Task, error)
 	Create(ctx context.Context, task *model.Task) (sql.Result, error)
+	Update(ctx context.Context, task *model.Task) error
+	Delete(ctx context.Context, id int) error
 }
 
 type taskRepository struct {
@@ -77,4 +79,20 @@ func (r *taskRepository) Create(ctx context.Context, task *model.Task) (sql.Resu
 		`INSERT INTO tasks (title, author, description, executor, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		task.Title, task.Author, task.Description, task.Executor, task.Status.ToString(), now, now,
 	)
+}
+
+func (r *taskRepository) Update(ctx context.Context, task *model.Task) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE tasks SET title = ?, description = ?, status = ?, executor = ?, updated_at = ? WHERE id = ?`,
+		task.Title, task.Description, task.Status.ToString(), task.Executor, time.Now(), task.ID,
+	)
+	return err
+}
+
+func (r *taskRepository) Delete(ctx context.Context, id int) error {
+	_, err := r.db.ExecContext(ctx,
+		`DELETE FROM tasks WHERE id = ?`,
+		id,
+	)
+	return err
 }

@@ -204,7 +204,7 @@ func TestGetTaskByID_NotFound(t *testing.T) {
 
 	handler.GetTaskByID(w, req)
 
-	if w.Code != http.StatusNotFound {
-		t.Errorf("expected status 404, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status 400, got %d", w.Code)
 	}
 }

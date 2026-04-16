@@ -39,9 +39,10 @@ type ServerConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret    string        `mapstructure:"jwt_secret"`
-	JWTAlgorithm string        `mapstructure:"jwt_algorithm"`
-	JWTExpiry    time.Duration `mapstructure:"jwt_expiry"`
+	JWTSecret        string        `mapstructure:"jwt_secret"`
+	JWTAlgorithm     string        `mapstructure:"jwt_algorithm"`
+	JWTExpiry        time.Duration `mapstructure:"jwt_expiry"`
+	JWTRefreshExpiry time.Duration `mapstructure:"jwt_refresh_expiry"`
 }
 
 type LoggingConfig struct {
@@ -80,9 +81,10 @@ func Load() (*Config, error) {
 			ShutdownTimeout: viper.GetDuration("server.shutdown_timeout"),
 		},
 		Auth: AuthConfig{ //TODO Update struct to use ES and RS algo
-			JWTSecret:    getEnv("JWT_SECRET", viper.GetString("auth.jwt_secret")),
-			JWTAlgorithm: getEnv("JWT_ALGORITHM", viper.GetString("auth.jwt_algorithm")),
-			JWTExpiry:    viper.GetDuration("auth.jwt_expiry"),
+			JWTSecret:        getEnv("JWT_SECRET", viper.GetString("auth.jwt_secret")),
+			JWTAlgorithm:     getEnv("JWT_ALGORITHM", viper.GetString("auth.jwt_algorithm")),
+			JWTExpiry:        viper.GetDuration("auth.jwt_expiry"),
+			JWTRefreshExpiry: viper.GetDuration("auth.jwt_refresh_expiry"),
 		},
 		Logging: LoggingConfig{
 			Level:  viper.GetString("logging.level"),

@@ -68,7 +68,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.jwt.GenerateToken(user.ID)
+	tokenPair, err := h.jwt.GenerateTokenPair(user.ID)
 	if err != nil {
 		log.Printf("token error: %v", err)
 		http.Error(w, "failed to generate token", http.StatusInternalServerError)
@@ -78,7 +78,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(model.AuthResponse{
-		Token: token,
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresAt:    tokenPair.ExpiresAt,
 		User: model.User{
 			ID:        user.ID,
 			Email:     user.Email,
@@ -113,19 +115,55 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	_ = h.userRepo.UpdateLastLogin(r.Context(), user.ID)
 
-	token, err := h.jwt.GenerateToken(user.ID)
+	tokenPair, err := h.jwt.GenerateTokenPair(user.ID)
 	if err != nil {
 		log.Printf("token error: %v", err)
 		http.Error(w, "failed to generate token", http.StatusInternalServerError)
 		return
 	}
 
+	// Обновляем last_login
+	_ = h.userRepo.UpdateLastLogin(r.Context(), user.ID)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(model.AuthResponse{
-		Token: token,
+		AccessToken:  tokenPair.AccessToken,  // 👈 Исправлено
+		RefreshToken: tokenPair.RefreshToken, // 👈 Добавлено
+		ExpiresAt:    tokenPair.ExpiresAt,    // 👈 Добавлено
 		User: model.User{
 			ID:    user.ID,
 			Email: user.Email,
 		},
 	})
+}
+
+// RefreshToken обновляет пару токенов
+func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if input.RefreshToken == "" {
+		http.Error(w, "refresh_token required", http.StatusBadRequest)
+		return
+	}
+
+	// Генерируем новую пару
+	pair, err := h.jwt.RefreshAccessToken(input.RefreshToken)
+	if err != nil {
+		http.Error(w, "invalid refresh token", http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(pair)
 }
