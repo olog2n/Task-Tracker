@@ -4,3 +4,6 @@
 *.local
 .DS_Store
 *.db
+*.pem
+*.key
+!*.example

@@ -39,8 +39,9 @@ type ServerConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret string        `mapstructure:"jwt_secret"`
-	JWTExpiry time.Duration `mapstructure:"jwt_expiry"`
+	JWTSecret    string        `mapstructure:"jwt_secret"`
+	JWTAlgorithm string        `mapstructure:"jwt_algorithm"`
+	JWTExpiry    time.Duration `mapstructure:"jwt_expiry"`
 }
 
 type LoggingConfig struct {
@@ -78,9 +79,10 @@ func Load() (*Config, error) {
 			WriteTimeout:    viper.GetDuration("server.write_timeout"),
 			ShutdownTimeout: viper.GetDuration("server.shutdown_timeout"),
 		},
-		Auth: AuthConfig{
-			JWTSecret: getEnv("JWT_SECRET", viper.GetString("auth.jwt_secret")),
-			JWTExpiry: viper.GetDuration("auth.jwt_expiry"),
+		Auth: AuthConfig{ //TODO Update struct to use ES and RS algo
+			JWTSecret:    getEnv("JWT_SECRET", viper.GetString("auth.jwt_secret")),
+			JWTAlgorithm: getEnv("JWT_ALGORITHM", viper.GetString("auth.jwt_algorithm")),
+			JWTExpiry:    viper.GetDuration("auth.jwt_expiry"),
 		},
 		Logging: LoggingConfig{
 			Level:  viper.GetString("logging.level"),
@@ -102,6 +104,11 @@ func MustLoad() *Config {
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
+
+	if err := validate(cfg); err != nil {
+		panic(fmt.Sprintf("invalid configuration: %v\n\n💡 Hint: Run './scripts/generate-keys.sh hs256 env > .env.local'", err))
+	}
+
 	return cfg
 }
 
@@ -141,16 +148,37 @@ func validate(cfg *Config) error {
 		return fmt.Errorf("database.driver is required")
 	}
 
-	if cfg.Auth.JWTSecret == "" {
-		return fmt.Errorf("auth.jwt_secret is required")
+	if cfg.Auth.JWTSecret == "" || len(cfg.Auth.JWTSecret) < JWT_SECRET_LEN {
+		return fmt.Errorf("auth.jwt_secret is required — generate with: ./scripts/generate-keys.sh")
+	}
+
+	validAlgorithms := []string{"HS256", "ES256", "RS256"}
+	if cfg.Auth.JWTAlgorithm == "" {
+		cfg.Auth.JWTAlgorithm = "HS256"
+	}
+	found := false
+	for _, alg := range validAlgorithms {
+		if strings.ToUpper(cfg.Auth.JWTAlgorithm) == alg {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("unsupported JWT algorithm: %s (supported: HS256, ES256, RS256)", cfg.Auth.JWTAlgorithm)
 	}
 
 	if cfg.Server.Port == "" {
 		return fmt.Errorf("server.port is required")
 	}
-
 	if !strings.Contains(cfg.Server.Port, ":") {
 		cfg.Server.Port = ":" + cfg.Server.Port
+	}
+
+	if cfg.Server.ReadTimeout <= 0 {
+		return fmt.Errorf("server.read_timeout must be positive")
+	}
+	if cfg.Server.WriteTimeout <= 0 {
+		return fmt.Errorf("server.write_timeout must be positive")
 	}
 
 	return nil

@@ -29,6 +29,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to init database: %v", err)
 	}
+	log.Printf("database connection OK")
 	defer db.Close()
 
 	taskRepo := repository.NewTaskRepository(db)
@@ -36,6 +37,12 @@ func main() {
 
 	metadata := handler.NewMetadataService("0.1.0", time.Now().Format(time.RFC822Z))
 	jwtService := auth.NewJWTService(cfg.Auth.JWTSecret, cfg.Auth.JWTExpiry)
+
+	// testClaims, err := jwtService.ValidateToken()
+	// if err != nil {
+	// 	log.Fatalf("JWT validation failed: %v", err)
+	// }
+	// log.Printf("JWT service OK")
 
 	healthHandler := handler.NewHealthHandler(metadata, db)
 	versionHandler := handler.NewVersionHandler(metadata)

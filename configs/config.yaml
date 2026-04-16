@@ -23,6 +23,7 @@ server:
 
 auth:
   jwt_secret: ""      # .env
+  jwt_algorithm: "HS256" # HS256 | ES256 | RS256
   jwt_expiry: 24h
 
 logging:
