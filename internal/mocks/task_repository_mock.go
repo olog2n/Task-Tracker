@@ -12,6 +12,7 @@ type MockTaskRepository struct {
 	CreateFunc  func(ctx context.Context, task *model.Task) (sql.Result, error)
 	UpdateFunc  func(ctx context.Context, task *model.Task) error
 	DeleteFunc  func(ctx context.Context, id int) error
+	CountFunc   func(ctx context.Context) (int, error)
 }
 
 func (m *MockTaskRepository) GetAll(ctx context.Context) ([]model.Task, error) {
@@ -32,4 +33,8 @@ func (m *MockTaskRepository) Update(ctx context.Context, task *model.Task) error
 
 func (m *MockTaskRepository) Delete(ctx context.Context, id int) error {
 	return m.DeleteFunc(ctx, id)
+}
+
+func (m *MockTaskRepository) Count(ctx context.Context) (int, error) {
+	return m.CountFunc(ctx)
 }

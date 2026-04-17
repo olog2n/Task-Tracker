@@ -9,8 +9,8 @@ import (
 
 var ErrUnknownStatus = fmt.Errorf("unknown task status")
 
-type TaskStatus int
 type TaskID int
+type TaskStatus int
 
 var statusName = map[TaskStatus]string{
 	StatusBacklog:    "backlog",
@@ -18,6 +18,18 @@ var statusName = map[TaskStatus]string{
 	StatusReview:     "review",
 	StatusDone:       "done",
 	StatusCancelled:  "cancelled",
+}
+
+type Task struct {
+	ID          TaskID     `json:"id"`
+	Title       string     `json:"title"`
+	Author      string     `json:"author"`
+	AuthorID    int        `json:"-"`
+	Description string     `json:"description"`
+	Executor    string     `json:"executor"`
+	Status      TaskStatus `json:"status"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 func FromString(str string) (TaskStatus, error) {
@@ -84,15 +96,4 @@ func (ti *TaskID) UnmarshalJSON(data []byte) error {
 	*ti = TaskID(res)
 
 	return nil
-}
-
-type Task struct {
-	ID          TaskID     `json:"id"`
-	Title       string     `json:"title"`
-	Author      string     `json:"author"`
-	Description string     `json:"description"`
-	Executor    string     `json:"executor"`
-	Status      TaskStatus `json:"status"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
 }
