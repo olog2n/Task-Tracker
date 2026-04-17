@@ -1,6 +1,7 @@
 #gitignore
 .env
 .env.local
+configs/config.yaml
 *.local
 .DS_Store
 *.db

@@ -1,38 +1,34 @@
-database:
-  driver: sqlite  # sqlite | postgres | mysql
+# configs/config.example.yaml
+# ===========================================
 
-  # SQLite 
-  name: tracker # (tracker.db)
-  
-  # PostgreSQL/MySQL
+database:
+  driver: sqlite
   host: localhost
   port: 5432
+  name: tracker
   user: postgres
-  password: ""    # .env
+  password: ""              # CHANGE_ME or DB_PASSWORD from .env
   sslmode: disable
-  
   max_open_conns: 10
   max_idle_conns: 5
   conn_max_lifetime: 1h
 
 server:
-  port: 6969
+  port: :6969
   read_timeout: 10s
   write_timeout: 10s
   shutdown_timeout: 5s
 
 auth:
-  jwt_secret: ""      # .env
-  jwt_algorithm: "HS256" # HS256 | ES256 | RS256
+  jwt_secret: ""            # CHANGE_ME or AUTH_JWT_SECRET from .env
   jwt_expiry: 24h
-  jwt_refresh_expiry: 168h #Refresh token - 7 days
-
+  jwt_refresh_expiry: 168h
   cookie_secure: false
   cookie_name_access: access_token
   cookie_name_refresh: refresh_token
-  cookie_domain : ""
+  cookie_domain: ""
   cookie_path: /
 
 logging:
   level: info
-  format: text  # text | json
+  format: text

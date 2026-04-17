@@ -36,7 +36,11 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 
 	metadata := handler.NewMetadataService("0.1.0", time.Now().Format(time.RFC822Z))
-	jwtService := auth.NewJWTService(cfg.Auth.JWTSecret, cfg.Auth.JWTExpiry, cfg.Auth.JWTRefreshExpiry)
+	jwtService := auth.NewJWTService(
+		cfg.Auth.JWTSecret,
+		cfg.Auth.JWTExpiry,
+		cfg.Auth.JWTRefreshExpiry,
+	)
 
 	// testClaims, err := jwtService.ValidateToken()
 	// if err != nil {
@@ -48,16 +52,24 @@ func main() {
 	versionHandler := handler.NewVersionHandler(metadata)
 
 	taskHandler := handler.NewTaskHandler(taskRepo)
-	authHandler := handler.NewAuthHandler(userRepo, jwtService)
+	authHandler := handler.NewAuthHandler(
+		userRepo,
+		jwtService,
+		cfg.Auth.CookieSecure,
+		cfg.Auth.CookieDomain,
+		cfg.Auth.CookiePath,
+		cfg.Auth.CookieNameAccess,
+		cfg.Auth.CookieNameRefresh,
+	)
 
 	r := chi.NewRouter()
 
 	// Middleware
-	r.Use(middleware.RequestID)                 // Добавляет X-Request-ID
-	r.Use(middleware.RealIP)                    // Получает реальный IP клиента
-	r.Use(middleware.Logger)                    // Chi-логгер (можно заменить на наш)
-	r.Use(middleware.Recoverer)                 // Паник-рекувери
-	r.Use(middleware.Timeout(60 * time.Second)) // Таймаут на запрос
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(traceMiddleware.Logger)
 
 	r.Route("/api/auth", func(r chi.Router) {

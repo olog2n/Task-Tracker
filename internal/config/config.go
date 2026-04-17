@@ -39,10 +39,15 @@ type ServerConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret        string        `mapstructure:"jwt_secret"`
-	JWTAlgorithm     string        `mapstructure:"jwt_algorithm"`
-	JWTExpiry        time.Duration `mapstructure:"jwt_expiry"`
-	JWTRefreshExpiry time.Duration `mapstructure:"jwt_refresh_expiry"`
+	JWTSecret         string        `mapstructure:"jwt_secret"`
+	JWTAlgorithm      string        `mapstructure:"jwt_algorithm"`
+	JWTExpiry         time.Duration `mapstructure:"jwt_expiry"`
+	JWTRefreshExpiry  time.Duration `mapstructure:"jwt_refresh_expiry"`
+	CookieSecure      bool          `mapstructure:"cookie_secure"`
+	CookieNameAccess  string        `mapstructure:"cookie_name_access"`
+	CookieNameRefresh string        `mapstructure:"cookie_name_refresh"`
+	CookieDomain      string        `mapstructure:"cookie_domain"`
+	CookiePath        string        `mapstructure:"cookie_path"`
 }
 
 type LoggingConfig struct {
@@ -56,6 +61,7 @@ func Load() (*Config, error) {
 
 	viper.SetConfigFile("configs/config.yaml")
 	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // AUTH_JWT_SECRET → auth.jwt_secret
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("failed to read config: %w", err)
@@ -81,10 +87,15 @@ func Load() (*Config, error) {
 			ShutdownTimeout: viper.GetDuration("server.shutdown_timeout"),
 		},
 		Auth: AuthConfig{ //TODO Update struct to use ES and RS algo
-			JWTSecret:        getEnv("JWT_SECRET", viper.GetString("auth.jwt_secret")),
-			JWTAlgorithm:     getEnv("JWT_ALGORITHM", viper.GetString("auth.jwt_algorithm")),
-			JWTExpiry:        viper.GetDuration("auth.jwt_expiry"),
-			JWTRefreshExpiry: viper.GetDuration("auth.jwt_refresh_expiry"),
+			JWTSecret:         getEnv("JWT_SECRET", viper.GetString("auth.jwt_secret")),
+			JWTAlgorithm:      getEnv("JWT_ALGORITHM", viper.GetString("auth.jwt_algorithm")),
+			JWTExpiry:         viper.GetDuration("auth.jwt_expiry"),
+			JWTRefreshExpiry:  viper.GetDuration("auth.jwt_refresh_expiry"),
+			CookieSecure:      viper.GetBool("auth.cookie_secure"),
+			CookieNameAccess:  viper.GetString("auth.cookie_name_access"),
+			CookieNameRefresh: viper.GetString("auth.cookie_name_refresh"),
+			CookieDomain:      viper.GetString("auth.cookie_domain"),
+			CookiePath:        viper.GetString("auth.cookie_path"),
 		},
 		Logging: LoggingConfig{
 			Level:  viper.GetString("logging.level"),
@@ -104,7 +115,7 @@ func Load() (*Config, error) {
 func MustLoad() *Config {
 	cfg, err := Load()
 	if err != nil {
-		panic(fmt.Sprintf("failed to load config: %v", err))
+		panic(fmt.Sprintf("failed to load config: %v\n\n Hint: Copy configs/config.example.yaml to configs/config.yaml", err))
 	}
 
 	if err := validate(cfg); err != nil {

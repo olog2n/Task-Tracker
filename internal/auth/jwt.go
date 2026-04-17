@@ -1,33 +1,34 @@
 package auth
 
 import (
-	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Claims — JWT claims с user_id
 type Claims struct {
 	UserID int `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
-// TokenPair — пара access + refresh токенов
 type TokenPair struct {
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token"`
 	ExpiresAt    time.Time `json:"expires_at"`
 }
 
-// JWTService — сервис для работы с JWT
 type JWTService struct {
 	secretKey     []byte
 	accessExpiry  time.Duration
 	refreshExpiry time.Duration
+	blacklist     TokenBlacklist
 }
 
-// NewJWTService создаёт новый JWTService
+type TokenBlacklist interface {
+	Add(token string, expiresAt time.Time) error
+	IsBlacklisted(token string) (bool, error)
+}
+
 func NewJWTService(secretKey string, accessExpiry, refreshExpiry time.Duration) *JWTService {
 	return &JWTService{
 		secretKey:     []byte(secretKey),
@@ -36,9 +37,7 @@ func NewJWTService(secretKey string, accessExpiry, refreshExpiry time.Duration) 
 	}
 }
 
-// GenerateTokenPair генерирует пару access + refresh токенов
 func (s *JWTService) GenerateTokenPair(userID int) (*TokenPair, error) {
-	// Access token (короткоживущий)
 	accessClaims := Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -52,7 +51,6 @@ func (s *JWTService) GenerateTokenPair(userID int) (*TokenPair, error) {
 		return nil, err
 	}
 
-	// Refresh token (долгоживущий)
 	refreshClaims := Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -73,24 +71,35 @@ func (s *JWTService) GenerateTokenPair(userID int) (*TokenPair, error) {
 	}, nil
 }
 
-// RefreshAccessToken генерирует новый access токен из refresh токена
 func (s *JWTService) RefreshAccessToken(refreshToken string) (*TokenPair, error) {
-	// Проверяем refresh токен
+	// if s.blacklist != nil {
+	// 	listed, err := s.blacklist.IsBlacklisted(refreshToken)
+	// 	if err != nil {
+	// 		return nil, ErrTokenBlacklist
+	// 	}
+	// 	if listed {
+	// 		return nil, ErrTokenHasBeenRevoked
+	// 	}
+	// }
+
 	claims, err := s.ValidateToken(refreshToken)
 	if err != nil {
-		return nil, errors.New("invalid refresh token")
+		return nil, ErrInvalidRefreshToken
 	}
 
-	// Генерируем новую пару
+	// if s.blacklist != nil {
+	// 	expiresAt := time.Now().Add(s.refreshExpiry)
+	// 	_ = s.blacklist.Add(refreshToken, expiresAt)
+	// }
+
 	return s.GenerateTokenPair(claims.UserID)
 }
 
 // ValidateToken проверяет и парсит JWT токен
 func (s *JWTService) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		// Проверяем метод подписи
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
+			return nil, ErrUnexpectedSigningMethod
 		}
 		return s.secretKey, nil
 	})
@@ -103,5 +112,5 @@ func (s *JWTService) ValidateToken(tokenString string) (*Claims, error) {
 		return claims, nil
 	}
 
-	return nil, errors.New("invalid token")
+	return nil, ErrInvalidToken
 }

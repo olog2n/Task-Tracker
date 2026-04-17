@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"tracker/internal/auth"
 	"tracker/internal/model"
@@ -14,15 +15,90 @@ import (
 )
 
 type AuthHandler struct {
-	userRepo repository.UserRepository
-	jwt      *auth.JWTService
+	userRepo          repository.UserRepository
+	jwt               *auth.JWTService
+	cookieSecure      bool
+	cookieDomain      string
+	cookiePath        string
+	cookieNameAccess  string
+	cookieNameRefresh string
 }
 
-func NewAuthHandler(userRepo repository.UserRepository, jwt *auth.JWTService) *AuthHandler {
-	return &AuthHandler{
-		userRepo: userRepo,
-		jwt:      jwt,
+func NewAuthHandler(
+	userRepo repository.UserRepository,
+	jwt *auth.JWTService,
+	cookieSecure bool,
+	cookieDomain string,
+	cookiePath string,
+	cookieNameAccess string,
+	cookieNameRefresh string,
+) *AuthHandler {
+	if cookiePath == "" {
+		cookiePath = "/"
 	}
+	if cookieNameAccess == "" {
+		cookieNameAccess = "access_token"
+	}
+	if cookieNameRefresh == "" {
+		cookieNameRefresh = "refresh_token"
+	}
+
+	return &AuthHandler{
+		userRepo:          userRepo,
+		jwt:               jwt,
+		cookieSecure:      cookieSecure,
+		cookieDomain:      cookieDomain,
+		cookiePath:        cookiePath,
+		cookieNameAccess:  cookieNameAccess,
+		cookieNameRefresh: cookieNameRefresh,
+	}
+}
+
+func (h *AuthHandler) setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string, expiresAt time.Time) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		Expires:  expiresAt,
+		Path:     "/api",
+		HttpOnly: true,
+		Secure:   h.cookieSecure,
+		SameSite: http.SameSiteStrictMode,
+		Domain:   h.cookieDomain,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Expires:  time.Now().Add(REFRESH_TOKEN_EXPIRE),
+		Path:     "/auth/refresh",
+		HttpOnly: true,
+		Secure:   h.cookieSecure,
+		SameSite: http.SameSiteStrictMode,
+		Domain:   h.cookieDomain,
+	})
+}
+
+func (h *AuthHandler) clearAuthCookies(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     h.cookieNameAccess,
+		Value:    "",
+		Expires:  time.Unix(0, 0),
+		Path:     h.cookiePath,
+		Domain:   h.cookieDomain,
+		HttpOnly: true,
+		Secure:   h.cookieSecure,
+		SameSite: http.SameSiteStrictMode,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     h.cookieNameRefresh,
+		Value:    "",
+		Expires:  time.Unix(0, 0),
+		Path:     "/auth/refresh",
+		Domain:   h.cookieDomain,
+		HttpOnly: true,
+		Secure:   h.cookieSecure,
+		SameSite: http.SameSiteStrictMode,
+	})
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -75,17 +151,14 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.setAuthCookies(w, tokenPair.AccessToken, tokenPair.RefreshToken, tokenPair.ExpiresAt)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(model.AuthResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		ExpiresAt:    tokenPair.ExpiresAt,
-		User: model.User{
-			ID:        user.ID,
-			Email:     user.Email,
-			CreatedAt: user.CreatedAt,
-		},
+	json.NewEncoder(w).Encode(model.User{
+		ID:        user.ID,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
 	})
 }
 
@@ -122,18 +195,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Обновляем last_login
+	h.setAuthCookies(w, tokenPair.AccessToken, tokenPair.RefreshToken, tokenPair.ExpiresAt)
+
 	_ = h.userRepo.UpdateLastLogin(r.Context(), user.ID)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(model.AuthResponse{
-		AccessToken:  tokenPair.AccessToken,  // 👈 Исправлено
-		RefreshToken: tokenPair.RefreshToken, // 👈 Добавлено
-		ExpiresAt:    tokenPair.ExpiresAt,    // 👈 Добавлено
-		User: model.User{
-			ID:    user.ID,
-			Email: user.Email,
-		},
+	json.NewEncoder(w).Encode(model.User{
+		ID:    user.ID,
+		Email: user.Email,
 	})
 }
 
@@ -144,26 +213,30 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "invalid JSON", http.StatusBadRequest)
+	refreshCookie, err := r.Cookie("refresh_token")
+	if err != nil {
+		http.Error(w, "refresh token required", http.StatusUnauthorized)
 		return
 	}
 
-	if input.RefreshToken == "" {
-		http.Error(w, "refresh_token required", http.StatusBadRequest)
-		return
-	}
-
-	// Генерируем новую пару
-	pair, err := h.jwt.RefreshAccessToken(input.RefreshToken)
+	pair, err := h.jwt.RefreshAccessToken(refreshCookie.Value)
 	if err != nil {
 		http.Error(w, "invalid refresh token", http.StatusUnauthorized)
 		return
 	}
 
+	h.setAuthCookies(w, pair.AccessToken, pair.RefreshToken, pair.ExpiresAt)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pair)
+	json.NewEncoder(w).Encode(map[string]time.Time{
+		"expires_at": pair.ExpiresAt,
+	})
+}
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	h.clearAuthCookies(w)
+
+	// h.tokenBlacklist.Add(refreshToken)
+
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -19,7 +19,8 @@ func main() {
 	}
 
 	resp, err := http.Post(
-		"http://localhost:6969/api/auth/register",
+		// "http://localhost:6969/api/auth/register",
+		"http://localhost:6969/api/auth/login",
 		"application/json",
 		bytes.NewReader(body),
 	)
