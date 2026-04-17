@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -43,21 +44,49 @@ import (
 // @description Введите токен в формате: "Bearer <token>"
 
 func main() {
-	cfg := config.MustLoad()
+	cfg := loadConfig()
 
-	ctx := context.Background()
-
-	db, err := database.New(ctx, cfg.Database.Driver, cfg.Database.DSN)
-	if err != nil {
-		log.Fatalf("failed to init database: %v", err)
-	}
-	log.Printf("database connection OK")
+	db := initDatabase(cfg)
 	defer db.Close()
 
-	taskRepo := repository.NewTaskRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	jwtService := initJWTService(cfg)
 
-	metadata := handler.NewMetadataService("0.1.0", time.Now().Format(time.RFC822Z))
+	repos := initRepositories(db)
+
+	metadata := initMetadataService()
+
+	handlers := initHandlers(
+		cfg,
+		db,
+		repos,
+		jwtService,
+		metadata,
+	)
+
+	router := initRouter(handlers, jwtService)
+
+	runServer(cfg, router)
+}
+
+func loadConfig() *config.Config {
+	log.Println("Loading configuration...")
+	cfg := config.MustLoad()
+	log.Println("Configuration loaded successfully")
+	return cfg
+}
+
+func initDatabase(cfg *config.Config) *sql.DB {
+	log.Println("Initializing database...")
+	db, err := database.New(context.Background(), cfg.Database.Driver, cfg.Database.DSN)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	log.Println("Database service UP")
+	return db
+}
+
+func initJWTService(cfg *config.Config) *auth.JWTService {
+	log.Println("Initializing JWT service...")
 	jwtService, err := auth.NewJWTService(
 		cfg.Auth.JWTAlgorithm,
 		cfg.Auth.JWTSecret,
@@ -67,63 +96,85 @@ func main() {
 		cfg.Auth.JWTExpiry,
 		cfg.Auth.JWTRefreshExpiry,
 	)
-
 	if err != nil {
-		log.Fatalf("JWT service failed to init: %v", err)
+		log.Fatalf("Failed to initialize JWT service: %v", err)
 	}
+	log.Println("JWT Service UP")
 
-	// testClaims, err := jwtService.ValidateToken()
-	// if err != nil {
-	// 	log.Fatalf("JWT validation failed: %v", err)
-	// }
-	// log.Printf("JWT service OK")
+	return jwtService
+}
 
-	healthHandler := handler.NewHealthHandler(metadata, db)
-	versionHandler := handler.NewVersionHandler(metadata)
-
-	taskHandler := handler.NewTaskHandler(taskRepo)
-	authHandler := handler.NewAuthHandler(
-		userRepo,
-		jwtService,
-		cfg.Auth.CookieSecure,
-		cfg.Auth.CookieDomain,
-		cfg.Auth.CookiePath,
-		cfg.Auth.CookieNameAccess,
-		cfg.Auth.CookieNameRefresh,
+func initMetadataService() *handler.MetadataService {
+	log.Println("Initializing Metadata service...")
+	return handler.NewMetadataService(
+		"0.1.0",
+		time.Now().Format(time.RFC822Z),
 	)
+}
+
+type Repositories struct {
+	User repository.UserRepository
+	Task repository.TaskRepository
+}
+
+func initRepositories(db *sql.DB) *Repositories {
+	log.Println("Initializing repositories...")
+	return &Repositories{
+		User: repository.NewUserRepository(db),
+		Task: repository.NewTaskRepository(db),
+	}
+}
+
+type Handlers struct {
+	Auth    *handler.AuthHandler
+	Task    *handler.TaskHandler
+	Version *handler.VersionHandler
+	Health  *handler.HealthHandler
+}
+
+func initHandlers(
+	cfg *config.Config,
+	db *sql.DB,
+	repos *Repositories,
+	jwtService *auth.JWTService,
+	metadata *handler.MetadataService,
+) *Handlers {
+	log.Println("Initializing handlers...")
+	return &Handlers{
+		Auth: handler.NewAuthHandler(
+			repos.User,
+			jwtService,
+			cfg.Auth.CookieSecure,
+			cfg.Auth.CookieDomain,
+			cfg.Auth.CookiePath,
+			cfg.Auth.CookieNameAccess,
+			cfg.Auth.CookieNameRefresh,
+		),
+		Task:    handler.NewTaskHandler(repos.Task),
+		Version: handler.NewVersionHandler(metadata),
+		Health:  handler.NewHealthHandler(metadata, db),
+	}
+}
+
+func initRouter(handlers *Handlers, jwtService *auth.JWTService) *chi.Mux {
+	log.Println("Setting up router...")
 
 	r := chi.NewRouter()
 
-	// Middleware
+	// Global middleware
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(traceMiddleware.Logger)
 
-	r.Route("/api/auth", func(r chi.Router) {
-		r.Post("/register", authHandler.Register)
-		r.Post("/login", authHandler.Login)
-		// r.Post("/logout", authHandler.Logout)
-		r.Post("/refresh", authHandler.RefreshToken)
-	})
-
-	r.Route("/api", func(r chi.Router) {
-		r.Use(traceMiddleware.AuthMiddleware(jwtService))
-
-		r.Route("/tasks", func(r chi.Router) {
-			r.Post("/", taskHandler.CreateTask)
-			r.Get("/", taskHandler.GetTasks)
-			r.Get("/{id}", taskHandler.GetTaskByID)
-			r.Put("/{id}", taskHandler.UpdateTask)
-			r.Delete("/{id}", taskHandler.DeleteTask)
-		})
-	})
-
-	r.Get("/health", healthHandler.Live)
-	r.Get("/ready", healthHandler.Ready)
-	r.Get("/version", versionHandler.ServeHTTP)
+	// Swagger UI
+	docs.SwaggerInfo.Title = "Issue Tracker API"
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Description = "Simple and fast task tracker with jwt auth"
+	docs.SwaggerInfo.Host = "localhost:6969"
+	docs.SwaggerInfo.BasePath = "/"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
@@ -132,40 +183,66 @@ func main() {
 		httpSwagger.DomID("swagger-ui"),
 	))
 
-	docs.SwaggerInfo.Title = "Issue Tracker API"
-	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Description = "Simple and fast task tracker with jwt auth"
-	docs.SwaggerInfo.Host = "localhost:6969"
-	docs.SwaggerInfo.BasePath = "/"
-	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+	//Health checks
+	r.Get("/health", handlers.Health.Live)
+	r.Get("/ready", handlers.Health.Ready)
+	r.Get("/version", handlers.Version.ServeHTTP)
+
+	// Public routes (authentication)
+	r.Route("/api/auth", func(r chi.Router) {
+		r.Post("/register", handlers.Auth.Register)
+		r.Post("/login", handlers.Auth.Login)
+		r.Post("/refresh", handlers.Auth.RefreshToken)
+	})
+
+	// Protected routes
+	r.Route("/api", func(r chi.Router) {
+		r.Use(traceMiddleware.AuthMiddleware(jwtService))
+
+		r.Route("/tasks", func(r chi.Router) {
+			r.Get("/", handlers.Task.GetTasks)
+			r.Post("/", handlers.Task.CreateTask)
+			r.Get("/{id}", handlers.Task.GetTaskByID)
+			r.Put("/{id}", handlers.Task.UpdateTask)
+			r.Delete("/{id}", handlers.Task.DeleteTask)
+		})
+	})
+
+	log.Println("Router UP")
+	return r
+}
+
+func runServer(cfg *config.Config, handler http.Handler) {
+	log.Println("Starting server...")
 
 	server := &http.Server{
 		Addr:         cfg.Server.Port,
-		Handler:      r,
+		Handler:      handler,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  120 * time.Second,
 	}
 
 	go func() {
-		log.Printf("starting server on %s (driver=%s)", cfg.Server.Port, cfg.Database.Driver)
+		log.Printf("Server listening on %s", cfg.Server.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server failed: %v", err)
+			log.Fatalf("Server failed: %v", err)
 		}
 	}()
 
+	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("shutting down server...")
+	log.Println("Shutting down server...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("server shutdown error: %v", err)
+		log.Fatalf("Server shutdown error: %v", err)
 	}
 
-	log.Println("server stopped")
+	log.Println("Server stopped gracefully")
 }
