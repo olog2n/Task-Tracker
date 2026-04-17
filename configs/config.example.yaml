@@ -20,7 +20,11 @@ server:
   shutdown_timeout: 5s
 
 auth:
-  jwt_secret: ""            # CHANGE_ME or AUTH_JWT_SECRET from .env
+  jwt_algorithm: HS256      # HS256 | ES256 | RS256
+  jwt_secret: ""            # CHANGE_ME or AUTH_JWT_SECRET from .env (ONLY FOR HS256)
+  jwt_private_key: ""       # CHANGE_ME or AUTH_JWT_PRIVATE_KEY from .env (ONLY FOR ES256/RS256)
+  jwt_public_key: ""        # CHANGE_ME or AUTH_JWT_PUBLIC_KEY from .env (ONLY FOR ES256/RS256)
+  jwt_key_id: "key-1"
   jwt_expiry: 24h
   jwt_refresh_expiry: 168h
   cookie_secure: false

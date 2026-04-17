@@ -22,8 +22,11 @@ server:
   shutdown_timeout: 5s
 
 auth:
-  jwt_secret: ""      # .env
   jwt_algorithm: "HS256" # HS256 | ES256 | RS256
+  jwt_secret: ""      # .env
+  jwt_private_key: "" # .env
+  jwt_public_key: "" # .env
+  jwt_key_id: "key-1"
   jwt_expiry: 24h
   jwt_refresh_expiry: 168h #Refresh token - 7 days
 

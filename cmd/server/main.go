@@ -36,11 +36,19 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 
 	metadata := handler.NewMetadataService("0.1.0", time.Now().Format(time.RFC822Z))
-	jwtService := auth.NewJWTService(
+	jwtService, err := auth.NewJWTService(
+		cfg.Auth.JWTAlgorithm,
 		cfg.Auth.JWTSecret,
+		cfg.Auth.JWTPrivateKey,
+		cfg.Auth.JWTPublicKey,
+		cfg.Auth.JWTKeyID,
 		cfg.Auth.JWTExpiry,
 		cfg.Auth.JWTRefreshExpiry,
 	)
+
+	if err != nil {
+		log.Fatalf("JWT service failed to init: %v", err)
+	}
 
 	// testClaims, err := jwtService.ValidateToken()
 	// if err != nil {

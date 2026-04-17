@@ -39,15 +39,21 @@ type ServerConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret         string        `mapstructure:"jwt_secret"`
-	JWTAlgorithm      string        `mapstructure:"jwt_algorithm"`
-	JWTExpiry         time.Duration `mapstructure:"jwt_expiry"`
-	JWTRefreshExpiry  time.Duration `mapstructure:"jwt_refresh_expiry"`
-	CookieSecure      bool          `mapstructure:"cookie_secure"`
-	CookieNameAccess  string        `mapstructure:"cookie_name_access"`
-	CookieNameRefresh string        `mapstructure:"cookie_name_refresh"`
-	CookieDomain      string        `mapstructure:"cookie_domain"`
-	CookiePath        string        `mapstructure:"cookie_path"`
+	// ===== JWT Основные настройки =====
+	JWTAlgorithm     string        `mapstructure:"jwt_algorithm"`   // HS256, ES256, RS256
+	JWTSecret        string        `mapstructure:"jwt_secret"`      // ONLY HS256
+	JWTPrivateKey    string        `mapstructure:"jwt_private_key"` // ONLY ES256/RS256
+	JWTPublicKey     string        `mapstructure:"jwt_public_key"`  // ONLY ES256/RS256
+	JWTKeyID         string        `mapstructure:"jwt_key_id"`
+	JWTExpiry        time.Duration `mapstructure:"jwt_expiry"`
+	JWTRefreshExpiry time.Duration `mapstructure:"jwt_refresh_expiry"`
+
+	// ===== Cookie настройки =====
+	CookieSecure      bool   `mapstructure:"cookie_secure"`
+	CookieNameAccess  string `mapstructure:"cookie_name_access"`
+	CookieNameRefresh string `mapstructure:"cookie_name_refresh"`
+	CookieDomain      string `mapstructure:"cookie_domain"`
+	CookiePath        string `mapstructure:"cookie_path"`
 }
 
 type LoggingConfig struct {
@@ -86,9 +92,12 @@ func Load() (*Config, error) {
 			WriteTimeout:    viper.GetDuration("server.write_timeout"),
 			ShutdownTimeout: viper.GetDuration("server.shutdown_timeout"),
 		},
-		Auth: AuthConfig{ //TODO Update struct to use ES and RS algo
-			JWTSecret:         getEnv("JWT_SECRET", viper.GetString("auth.jwt_secret")),
+		Auth: AuthConfig{
 			JWTAlgorithm:      getEnv("JWT_ALGORITHM", viper.GetString("auth.jwt_algorithm")),
+			JWTSecret:         getEnv("JWT_SECRET", viper.GetString("auth.jwt_secret")),
+			JWTPrivateKey:     getEnv("JWT_PRIVATE_KEY", viper.GetString("auth.jwt_private_key")),
+			JWTPublicKey:      getEnv("JWT_PUBLIC_KEY", viper.GetString("auth.jwt_public_key")),
+			JWTKeyID:          viper.GetString("auth.jet_key_id"),
 			JWTExpiry:         viper.GetDuration("auth.jwt_expiry"),
 			JWTRefreshExpiry:  viper.GetDuration("auth.jwt_refresh_expiry"),
 			CookieSecure:      viper.GetBool("auth.cookie_secure"),
