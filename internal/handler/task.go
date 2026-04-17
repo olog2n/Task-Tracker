@@ -25,6 +25,15 @@ func NewTaskHandler(repo repository.TaskRepository) *TaskHandler {
 	return &TaskHandler{repo: repo}
 }
 
+// GetTasks godoc
+// @Summary      Get all tasks
+// @Description  Get list of all tasks for authenticated user
+// @Tags         tasks
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {array}   model.Task
+// @Failure      401  {object}  map[string]string
+// @Router       /api/tasks [get]
 func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -48,6 +57,65 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tasks)
 }
 
+// GetTaskByID godoc
+// @Summary      Get a task by ID
+// @Description  Get detailed information about a specific task by its ID. Only the task author can access this endpoint.
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      int  true  "Task ID"  minimum(1)
+// @Success      200  {object}  model.Task
+// @Failure      400  {object}  map[string]string  "Invalid ID format"
+// @Failure      401  {object}  map[string]string  "Unauthorized - Invalid or missing token"
+// @Failure      404  {object}  map[string]string  "Task not found"
+// @Router       /api/tasks/{id} [get]
+func (h *TaskHandler) GetTaskByID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	ctx := r.Context()
+
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	task, err := h.repo.GetByID(ctx, id)
+	if err == sql.ErrNoRows {
+		http.Error(w, "task not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("query error: %v", err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(task)
+}
+
+// CreateTask godoc
+// @Summary      Create a new task
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request body model.Task true "Task data"
+// @Success      201  {object}  model.Task
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Router       /api/tasks [post]
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -97,41 +165,19 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(task)
 }
 
-func (h *TaskHandler) GetTaskByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	ctx := r.Context()
-
-	idStr := chi.URLParam(r, "id")
-	if idStr == "" {
-		http.Error(w, "id is required", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-
-	task, err := h.repo.GetByID(ctx, id)
-	if err == sql.ErrNoRows {
-		http.Error(w, "task not found", http.StatusNotFound)
-		return
-	}
-	if err != nil {
-		log.Printf("query error: %v", err)
-		http.Error(w, "database error", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(task)
-}
-
+// UpdateTask godoc
+// @Summary      Update a task
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      int true "Task ID"
+// @Param        request body model.Task true "Task data"
+// @Success      200  {object}  model.Task
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Router       /api/tasks/{id} [put]
 // UpdateTask обновляет задачу
 func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
@@ -199,7 +245,16 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(input)
 }
 
-// DeleteTask удаляет задачу
+// DeleteTask godoc
+// @Summary      Delete a task
+// @Tags         tasks
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      int true "Task ID"
+// @Success      204
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Router       /api/tasks/{id} [delete]
 func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

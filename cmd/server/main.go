@@ -11,7 +11,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 
+	"tracker/docs"
 	"tracker/internal/auth"
 	"tracker/internal/config"
 	"tracker/internal/database"
@@ -19,6 +21,26 @@ import (
 	"tracker/internal/repository"
 	"tracker/internal/traceMiddleware"
 )
+
+// @title           Issue Tracker API
+// @version         0.1.0
+// @description     Простой и быстрый трекер задач с JWT аутентификацией
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name   GPLv3
+// @license.url    https://opensource.org/license/gpl-3.0
+
+// @host      localhost:6969
+// @BasePath  /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Введите токен в формате: "Bearer <token>"
 
 func main() {
 	cfg := config.MustLoad()
@@ -102,6 +124,20 @@ func main() {
 	r.Get("/health", healthHandler.Live)
 	r.Get("/ready", healthHandler.Ready)
 	r.Get("/version", versionHandler.ServeHTTP)
+
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("none"),
+		httpSwagger.DomID("swagger-ui"),
+	))
+
+	docs.SwaggerInfo.Title = "Issue Tracker API"
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Description = "Simple and fast task tracker with jwt auth"
+	docs.SwaggerInfo.Host = "localhost:6969"
+	docs.SwaggerInfo.BasePath = "/"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	server := &http.Server{
 		Addr:         cfg.Server.Port,

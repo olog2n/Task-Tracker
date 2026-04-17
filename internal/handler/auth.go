@@ -101,6 +101,16 @@ func (h *AuthHandler) clearAuthCookies(w http.ResponseWriter) {
 	})
 }
 
+// Register godoc
+// @Summary      Register a new user
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body model.RegisterInput true "Registration data"
+// @Success      201  {object}  model.AuthResponse
+// @Failure      400  {object}  map[string]string
+// @Failure      409  {object}  map[string]string
+// @Router       /api/auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -162,6 +172,16 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Login godoc
+// @Summary      Login user
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body model.LoginInput true "Login credentials"
+// @Success      200  {object}  model.AuthResponse
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Router       /api/auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -206,6 +226,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// RefreshToken godoc
+// @Summary      Refresh access token
+// @Tags         auth
+// @Produce      json
+// @Success      200  {object}  auth.TokenPair
+// @Failure      401  {object}  map[string]string
+// @Router       /api/auth/refresh [post]
 // RefreshToken обновляет пару токенов
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
