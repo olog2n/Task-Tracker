@@ -8,10 +8,6 @@ import (
 	"tracker/internal/auth"
 )
 
-type contextKey string
-
-const UserIDKey contextKey = "user_id"
-
 func AuthMiddleware(jwt *auth.JWTService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -63,7 +63,7 @@ func main() {
 		metadata,
 	)
 
-	router := initRouter(handlers, jwtService)
+	router := initRouter(handlers, jwtService, repos)
 
 	runServer(cfg, router)
 }
@@ -107,21 +107,23 @@ func initJWTService(cfg *config.Config) *auth.JWTService {
 func initMetadataService() *handler.MetadataService {
 	log.Println("Initializing Metadata service...")
 	return handler.NewMetadataService(
-		"0.1.0",
+		"0.2.0",
 		time.Now().Format(time.RFC822Z),
 	)
 }
 
 type Repositories struct {
-	User repository.UserRepository
-	Task repository.TaskRepository
+	User    repository.UserRepository
+	Task    repository.TaskRepository
+	Project repository.ProjectRepository
 }
 
 func initRepositories(db *sql.DB) *Repositories {
 	log.Println("Initializing repositories...")
 	return &Repositories{
-		User: repository.NewUserRepository(db),
-		Task: repository.NewTaskRepository(db),
+		User:    repository.NewUserRepository(db),
+		Task:    repository.NewTaskRepository(db),
+		Project: repository.NewProjectRepository(db),
 	}
 }
 
@@ -131,6 +133,7 @@ type Handlers struct {
 	Version *handler.VersionHandler
 	Health  *handler.HealthHandler
 	User    *handler.UserHandler
+	Project *handler.ProjectHandler
 }
 
 func initHandlers(
@@ -139,7 +142,6 @@ func initHandlers(
 	repos *Repositories,
 	jwtService *auth.JWTService,
 	metadata *handler.MetadataService,
-	// user *handler.UserHandler,
 ) *Handlers {
 	log.Println("Initializing handlers...")
 	return &Handlers{
@@ -156,10 +158,11 @@ func initHandlers(
 		Version: handler.NewVersionHandler(metadata),
 		Health:  handler.NewHealthHandler(metadata, db),
 		User:    handler.NewUserHandler(repos.User),
+		Project: handler.NewProjectHandler(repos.Project, repos.User),
 	}
 }
 
-func initRouter(handlers *Handlers, jwtService *auth.JWTService) *chi.Mux {
+func initRouter(handlers *Handlers, jwtService *auth.JWTService, repos *Repositories) *chi.Mux {
 	log.Println("Setting up router...")
 
 	r := chi.NewRouter()
@@ -201,6 +204,35 @@ func initRouter(handlers *Handlers, jwtService *auth.JWTService) *chi.Mux {
 	// Protected routes
 	r.Route("/api", func(r chi.Router) {
 		r.Use(tracemiddleware.AuthMiddleware(jwtService))
+
+		r.Route("/projects", func(r chi.Router) {
+			r.Post("/", handlers.Project.CreateProject)
+			r.Get("/", handlers.Project.GetProjects)
+
+			r.Route("/{project_id}", func(r chi.Router) {
+				r.Use(tracemiddleware.ProjectAuthMiddleware(repos.Project))
+
+				r.Get("/", handlers.Project.GetProject)
+				r.Put("/", handlers.Project.UpdateProject)
+				r.Delete("/", handlers.Project.DeleteProject)
+
+				r.Route("/tasks", func(r chi.Router) {
+					r.Get("/", handlers.Task.GetTasks)
+					r.Post("/", handlers.Task.CreateTask)
+					r.Get("/{task_id}", handlers.Task.GetTaskByID)
+					r.Put("/{task_id}", handlers.Task.UpdateTask)
+					r.Delete("/{task_id}", handlers.Task.DeleteTask)
+				})
+
+				r.Route("/members", func(r chi.Router) {
+					r.Get("/", handlers.Project.GetMembers)
+					r.Post("/", handlers.Project.AddMember)
+					r.Put("/{user_id}", handlers.Project.UpdateMemberRole)
+					r.Delete("/{user_id}", handlers.Project.RemoveMember)
+				})
+			})
+		})
+
 		r.Route("/users", func(r chi.Router) {
 			r.Delete("/{id}", handlers.User.DeactivateUser)
 			r.Post("/{id}/reactivate", handlers.User.ReactivateUser)
