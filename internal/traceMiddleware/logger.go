@@ -1,4 +1,4 @@
-package traceMiddleware
+package tracemiddleware
 
 import (
 	"log"

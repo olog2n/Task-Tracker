@@ -20,7 +20,7 @@ import (
 	"tracker/internal/database"
 	"tracker/internal/handler"
 	"tracker/internal/repository"
-	"tracker/internal/traceMiddleware"
+	"tracker/internal/tracemiddleware"
 )
 
 // @title           Issue Tracker API
@@ -130,6 +130,7 @@ type Handlers struct {
 	Task    *handler.TaskHandler
 	Version *handler.VersionHandler
 	Health  *handler.HealthHandler
+	User    *handler.UserHandler
 }
 
 func initHandlers(
@@ -138,6 +139,7 @@ func initHandlers(
 	repos *Repositories,
 	jwtService *auth.JWTService,
 	metadata *handler.MetadataService,
+	// user *handler.UserHandler,
 ) *Handlers {
 	log.Println("Initializing handlers...")
 	return &Handlers{
@@ -153,6 +155,7 @@ func initHandlers(
 		Task:    handler.NewTaskHandler(repos.Task),
 		Version: handler.NewVersionHandler(metadata),
 		Health:  handler.NewHealthHandler(metadata, db),
+		User:    handler.NewUserHandler(repos.User),
 	}
 }
 
@@ -166,7 +169,7 @@ func initRouter(handlers *Handlers, jwtService *auth.JWTService) *chi.Mux {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
-	r.Use(traceMiddleware.Logger)
+	r.Use(tracemiddleware.Logger)
 
 	// Swagger UI
 	docs.SwaggerInfo.Title = "Issue Tracker API"
@@ -197,7 +200,11 @@ func initRouter(handlers *Handlers, jwtService *auth.JWTService) *chi.Mux {
 
 	// Protected routes
 	r.Route("/api", func(r chi.Router) {
-		r.Use(traceMiddleware.AuthMiddleware(jwtService))
+		r.Use(tracemiddleware.AuthMiddleware(jwtService))
+		r.Route("/users", func(r chi.Router) {
+			r.Delete("/{id}", handlers.User.DeactivateUser)
+			r.Post("/{id}/reactivate", handlers.User.ReactivateUser)
+		})
 
 		r.Route("/tasks", func(r chi.Router) {
 			r.Get("/", handlers.Task.GetTasks)

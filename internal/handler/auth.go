@@ -196,8 +196,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userRepo.GetByEmail(r.Context(), input.Email)
 	if err != nil {
-		// Не говорим явно, что email не найден (безопасность)
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	if !user.CanLogin() {
+		http.Error(w, "account deactivated", http.StatusUnauthorized)
 		return
 	}
 

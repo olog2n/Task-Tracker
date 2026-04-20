@@ -12,7 +12,7 @@ import (
 
 	"tracker/internal/model"
 	"tracker/internal/repository"
-	"tracker/internal/traceMiddleware"
+	"tracker/internal/tracemiddleware"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -155,7 +155,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	userID, ok := traceMiddleware.GetUserIDFromContext(r)
+	userID, ok := tracemiddleware.GetUserIDFromContext(r)
 	if !ok || userID == 0 {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -219,7 +219,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	userID, ok := traceMiddleware.GetUserIDFromContext(r)
+	userID, ok := tracemiddleware.GetUserIDFromContext(r)
 	if !ok || userID == 0 {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -294,7 +294,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	userID, ok := traceMiddleware.GetUserIDFromContext(r)
+	userID, ok := tracemiddleware.GetUserIDFromContext(r)
 	if !ok || userID == 0 {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
