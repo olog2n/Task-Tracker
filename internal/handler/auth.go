@@ -258,11 +258,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Router       /api/auth/refresh [post]
 // RefreshToken обновляет пару токенов
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	refreshCookie, err := r.Cookie("refresh_token")
 	if err != nil {
 		http.Error(w, "refresh token required", http.StatusUnauthorized)
