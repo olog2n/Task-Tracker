@@ -8,11 +8,11 @@ import (
 )
 
 type TaskRepository interface {
-	GetAll(ctx context.Context) ([]model.Task, error)
 	GetByID(ctx context.Context, id int) (*model.Task, error)
 	Create(ctx context.Context, task *model.Task) (sql.Result, error)
 	Update(ctx context.Context, task *model.Task) error
 	Delete(ctx context.Context, id int) error
+	GetWithPagination(ctx context.Context, limit, offset int) ([]model.Task, error)
 	Count(ctx context.Context) (int, error)
 }
 
@@ -22,32 +22,6 @@ type taskRepository struct {
 
 func NewTaskRepository(db *sql.DB) TaskRepository {
 	return &taskRepository{db: db}
-}
-
-func (r *taskRepository) GetAll(ctx context.Context) ([]model.Task, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, title, author, author_id, description, executor, status, created_at, updated_at FROM tasks`,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var tasks []model.Task
-	for rows.Next() {
-		var t model.Task
-		var statusStr string
-		var createdAt, updatedAt time.Time
-		err := rows.Scan(&t.ID, &t.Title, &t.Author, &t.AuthorID, &t.Description, &t.Executor, &statusStr, &createdAt, &updatedAt)
-		if err != nil {
-			return nil, err
-		}
-		t.Status, _ = model.FromString(statusStr)
-		t.CreatedAt = createdAt
-		t.UpdatedAt = updatedAt
-		tasks = append(tasks, t)
-	}
-	return tasks, nil
 }
 
 func (r *taskRepository) GetByID(ctx context.Context, id int) (*model.Task, error) {

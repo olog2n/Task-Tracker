@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -21,15 +22,23 @@ var statusName = map[TaskStatus]string{
 }
 
 type Task struct {
-	ID          TaskID     `json:"id"`
-	Title       string     `json:"title"`
-	Author      string     `json:"author"`
-	AuthorID    int        `json:"-"`
-	Description string     `json:"description"`
-	Executor    string     `json:"executor"`
-	Status      TaskStatus `json:"status"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          TaskID        `json:"id"`
+	ProjectID   sql.NullInt64 `json:"project_id,omitempty"` // (nullable)
+	Title       string        `json:"title"`
+	Author      string        `json:"author"`              // Email
+	AuthorID    sql.NullInt64 `json:"author_id,omitempty"` // FK (nullable)
+	Description string        `json:"description"`
+	Executor    string        `json:"executor"`
+	Status      TaskStatus    `json:"status"`
+	CreatedAt   time.Time     `json:"created_at"`
+	UpdatedAt   time.Time     `json:"updated_at"`
+}
+
+type PaginatedTasks struct {
+	Tasks  []Task `json:"tasks"`
+	Total  int    `json:"total"`
+	Limit  int    `json:"limit"`
+	Offset int    `json:"offset"`
 }
 
 func FromString(str string) (TaskStatus, error) {

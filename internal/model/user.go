@@ -5,6 +5,23 @@ import (
 	"time"
 )
 
+type RegisterInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type AuthResponse struct {
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	ExpiresAt    time.Time `json:"expires_at"`
+	User         User      `json:"user"`
+}
+
 type User struct {
 	ID                   int           `json:"id"`
 	Email                string        `json:"email"`
@@ -31,21 +48,4 @@ func (u *User) CanLogin() bool {
 // TODO: Update it with correct roles
 func (u *User) IsAdmin() bool {
 	return u.ID == 1 //NOTE: Boilerplate, first user is admin
-}
-
-type RegisterInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type LoginInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type AuthResponse struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	ExpiresAt    time.Time `json:"expires_at"`
-	User         User      `json:"user"`
 }

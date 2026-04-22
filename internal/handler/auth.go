@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -10,8 +11,6 @@ import (
 	"tracker/internal/auth"
 	"tracker/internal/model"
 	"tracker/internal/repository"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
@@ -132,7 +131,21 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	ctx := r.Context()
+
+	existingUser, err := h.userRepo.GetByEmail(ctx, input.Email)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("database error: %v", err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	if existingUser != nil {
+		http.Error(w, "email already exists", http.StatusConflict)
+		return
+	}
+
+	hash, err := auth.HashPassword(input.Password)
 	if err != nil {
 		log.Printf("hash error: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -141,7 +154,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user := &model.User{
 		Email:        input.Email,
-		PasswordHash: string(hash),
+		PasswordHash: hash,
+		IsActive:     true,
+		CreatedAt:    time.Now(),
 	}
 
 	if err := h.userRepo.Create(r.Context(), user); err != nil {
@@ -205,7 +220,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)); err != nil {
+	if err := auth.ComparePassword(user.PasswordHash, input.Password); err != nil {
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
@@ -223,11 +238,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	_ = h.userRepo.UpdateLastLogin(r.Context(), user.ID)
 
+	response := model.AuthResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresAt:    time.Now().Add(24 * time.Hour),
+		User:         *user,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(model.User{
-		ID:    user.ID,
-		Email: user.Email,
-	})
+	json.NewEncoder(w).Encode(response)
 }
 
 // RefreshToken godoc

@@ -21,13 +21,6 @@ type TaskHandler struct {
 	repo repository.TaskRepository
 }
 
-type PaginatedTasks struct {
-	Tasks  []model.Task `json:"tasks"`
-	Total  int          `json:"total"`
-	Limit  int          `json:"limit"`
-	Offset int          `json:"offset"`
-}
-
 func NewTaskHandler(repo repository.TaskRepository) *TaskHandler {
 	return &TaskHandler{repo: repo}
 }
@@ -64,7 +57,7 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	tasks, err := h.repo.GetAll(ctx)
+	tasks, err := h.repo.GetWithPagination(ctx, limit, offset)
 	if err != nil {
 		log.Printf("repo error: %v", err)
 		http.Error(w, "database error", http.StatusInternalServerError)
@@ -77,7 +70,7 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 		tasks = make([]model.Task, 0)
 	}
 
-	response := PaginatedTasks{
+	response := model.PaginatedTasks{
 		Tasks:  tasks,
 		Total:  total,
 		Limit:  limit,
@@ -172,7 +165,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input.AuthorID = userID
+	input.AuthorID = sql.NullInt64{Int64: int64(userID), Valid: ok}
 	input.CreatedAt = time.Now()
 	input.UpdatedAt = time.Now()
 	input.Status = model.StatusBacklog
@@ -243,7 +236,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if existing.AuthorID != userID {
+	if existing.AuthorID != (sql.NullInt64{Int64: int64(userID), Valid: ok}) {
 		http.Error(w, "forbidden - only author can update this task", http.StatusForbidden)
 		return
 	}
@@ -318,7 +311,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if task.AuthorID != userID {
+	if task.AuthorID != (sql.NullInt64{Int64: int64(userID), Valid: ok}) {
 		http.Error(w, "forbidden - only author can delete this task", http.StatusForbidden)
 		return
 	}

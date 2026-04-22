@@ -388,7 +388,6 @@ func (h *ProjectHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request
 
 	ctx := r.Context()
 
-	// Только админ может менять роли
 	member, ok := tracemiddleware.GetProjectMemberFromContext(r)
 	if !ok || !member.CanManageMembers() {
 		http.Error(w, "forbidden - project admin only", http.StatusForbidden)

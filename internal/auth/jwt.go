@@ -30,20 +30,17 @@ type TokenBlacklist interface {
 	IsBlacklisted(token string) (bool, error)
 }
 
-// internal/auth/jwt.go
-
 type JWTService struct {
 	algorithm     jwt.SigningMethod
-	privateKey    interface{} // *ecdsa.PrivateKey или *rsa.PrivateKey
-	publicKey     interface{} // *ecdsa.PublicKey или *rsa.PublicKey
-	symmetricKey  []byte      // Для HS256
+	privateKey    interface{} // *ecdsa.PrivateKey or *rsa.PrivateKey
+	publicKey     interface{} // *ecdsa.PublicKey or *rsa.PublicKey
+	symmetricKey  []byte      // HS256
 	keyID         string
 	accessExpiry  time.Duration
 	refreshExpiry time.Duration
 	blacklist     TokenBlacklist
 }
 
-// NewJWTService создаёт сервис с поддержкой всех алгоритмов
 func NewJWTService(algorithm, secret, privateKeyPEM, publicKeyPEM, keyID string,
 	accessExpiry, refreshExpiry time.Duration) (*JWTService, error) {
 
@@ -110,7 +107,6 @@ func NewJWTService(algorithm, secret, privateKeyPEM, publicKeyPEM, keyID string,
 	return s, nil
 }
 
-// GenerateTokenPair генерирует пару токенов
 func (s *JWTService) GenerateTokenPair(userID int) (*TokenPair, error) {
 	now := time.Now()
 
@@ -161,7 +157,6 @@ func (s *JWTService) GenerateTokenPair(userID int) (*TokenPair, error) {
 	}, nil
 }
 
-// signToken подписывает токен в зависимости от алгоритма
 func (s *JWTService) signToken(token *jwt.Token) (string, error) {
 	switch s.algorithm.(type) {
 	case *jwt.SigningMethodHMAC:
@@ -175,10 +170,8 @@ func (s *JWTService) signToken(token *jwt.Token) (string, error) {
 	}
 }
 
-// ValidateToken проверяет токен
 func (s *JWTService) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		// Проверяем, что алгоритм совпадает с ожидаемым
 		if token.Method.Alg() != s.algorithm.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
 		}
@@ -206,12 +199,7 @@ func (s *JWTService) ValidateToken(tokenString string) (*Claims, error) {
 	return nil, errors.New("invalid token")
 }
 
-// internal/auth/jwt.go
-
-// RefreshAccessToken генерирует новую пару токенов из refresh токена
-// Работает одинаково для HS256, ES256, RS256
 func (s *JWTService) RefreshAccessToken(refreshToken string) (*TokenPair, error) {
-	// 1. Проверяем blacklist (если есть)
 	if s.blacklist != nil {
 		listed, err := s.blacklist.IsBlacklisted(refreshToken)
 		if err != nil {
@@ -222,27 +210,20 @@ func (s *JWTService) RefreshAccessToken(refreshToken string) (*TokenPair, error)
 		}
 	}
 
-	// 2. Валидируем refresh токен (алгоритм проверяется внутри ValidateToken)
 	claims, err := s.ValidateToken(refreshToken)
 	if err != nil {
 		return nil, errors.New("invalid refresh token")
 	}
 
-	// 3. Добавляем старый токен в blacklist (rotation)
 	if s.blacklist != nil {
 		expiresAt := time.Now().Add(s.refreshExpiry)
 		_ = s.blacklist.Add(refreshToken, expiresAt)
 	}
 
-	// 4. Генерируем новую пару токенов
-	// 👇 Здесь используется текущий алгоритм (HS256/ES256/RS256)
 	return s.GenerateTokenPair(claims.UserID)
 }
 
-// ===== Вспомогательные функции для парсинга ключей =====
-
 func parseECDSAPrivateKey(pemStr string) (*ecdsa.PrivateKey, error) {
-	// Убираем экранированные переносы строк (из env)
 	pemStr = strings.ReplaceAll(pemStr, "\\n", "\n")
 
 	block, _ := pem.Decode([]byte(pemStr))
