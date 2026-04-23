@@ -43,7 +43,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	handler := AuthMiddleware(jwtService)(nextHandler)
+	handler := AuthMiddleware(jwtService, "access_token")(nextHandler)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Header.Set("Authorization", "Bearer "+tokenString)
@@ -73,7 +73,7 @@ func TestAuthMiddleware_MissingToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	handler := AuthMiddleware(jwtService)(nextHandler)
+	handler := AuthMiddleware(jwtService, "access_token")(nextHandler)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	rr := httptest.NewRecorder()
@@ -94,7 +94,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	handler := AuthMiddleware(jwtService)(nextHandler)
+	handler := AuthMiddleware(jwtService, "access_token")(nextHandler)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Header.Set("Authorization", "Bearer invalid-token")
@@ -125,7 +125,7 @@ func TestAuthMiddleware_ExpiredToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	handler := AuthMiddleware(jwtService)(nextHandler)
+	handler := AuthMiddleware(jwtService, "access_token")(nextHandler)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Header.Set("Authorization", "Bearer "+tokenString)

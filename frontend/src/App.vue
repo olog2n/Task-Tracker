@@ -1,8 +1,21 @@
-<script setup></script>
-
 <template>
-  <h1 class="text-3xl font-bold text-blue-500">Привет Tailwind!</h1>
+  <router-view />
 </template>
 
+<script>
+export default {
+  name: 'App'
+}
+</script>
 
-<style scoped></style>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+</style>

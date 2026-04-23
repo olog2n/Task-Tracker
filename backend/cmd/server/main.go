@@ -198,12 +198,13 @@ func initRouter(handlers *Handlers, jwtService *auth.JWTService, repos *Reposito
 	r.Route("/api/auth", func(r chi.Router) {
 		r.Post("/register", handlers.Auth.Register)
 		r.Post("/login", handlers.Auth.Login)
+		r.Post("/logout", handlers.Auth.Logout)
 		r.Post("/refresh", handlers.Auth.RefreshToken)
 	})
 
 	// Protected routes
 	r.Route("/api", func(r chi.Router) {
-		r.Use(tracemiddleware.AuthMiddleware(jwtService))
+		r.Use(tracemiddleware.AuthMiddleware(jwtService, "access_token"))
 
 		r.Route("/projects", func(r chi.Router) {
 			r.Post("/", handlers.Project.CreateProject)

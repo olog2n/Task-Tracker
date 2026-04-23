@@ -17,13 +17,9 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
 
-# 👇 Создай директорию configs
 RUN mkdir -p /app/configs
 
 COPY --from=build /app/server .
-
-# 👇 Копируй конфиг ПРЯМО В ОБРАЗ (не через volume!)
-# COPY ./config.docker.yaml ./app/configs/config.yaml
 
 EXPOSE 8080
 CMD ["./server"]

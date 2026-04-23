@@ -61,7 +61,7 @@ func (h *AuthHandler) setAuthCookies(w http.ResponseWriter, accessToken, refresh
 		Path:     "/api",
 		HttpOnly: true,
 		Secure:   h.cookieSecure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		Domain:   h.cookieDomain,
 	})
 
@@ -72,7 +72,7 @@ func (h *AuthHandler) setAuthCookies(w http.ResponseWriter, accessToken, refresh
 		Path:     "/auth/refresh",
 		HttpOnly: true,
 		Secure:   h.cookieSecure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		Domain:   h.cookieDomain,
 	})
 }
