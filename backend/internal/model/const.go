@@ -6,11 +6,3 @@ const (
 	DescriptionMaxLength int = 1000
 	AuthorMinLength      int = 1
 )
-
-const (
-	StatusBacklog TaskStatus = iota
-	StatusInProgress
-	StatusReview
-	StatusDone
-	StatusCancelled
-)

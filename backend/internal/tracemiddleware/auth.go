@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"tracker/internal/auth"
+	"tracker/internal/model"
 )
 
 func AuthMiddleware(jwt *auth.JWTService, cookieName string) func(http.Handler) http.Handler {
@@ -48,4 +49,30 @@ func AuthMiddleware(jwt *auth.JWTService, cookieName string) func(http.Handler) 
 func GetUserIDFromContext(r *http.Request) (int, bool) {
 	userID, ok := r.Context().Value(UserIDKey).(int)
 	return userID, ok
+}
+
+func GetUserEmailFromContext(r *http.Request) (string, bool) {
+	email, ok := r.Context().Value(UserEmailKey).(string)
+	return email, ok
+}
+
+func GetUserNameFromContext(r *http.Request) (string, bool) {
+	name, ok := r.Context().Value(UserNameKey).(string)
+	return name, ok
+}
+
+func GetUserFromContext(r *http.Request) (*model.User, bool) {
+	userID, okID := GetUserIDFromContext(r)
+	userEmail, okEmail := GetUserEmailFromContext(r)
+	userName, okName := GetUserNameFromContext(r)
+
+	if !okID || !okEmail || !okName {
+		return nil, false
+	}
+
+	return &model.User{
+		ID:    userID,
+		Email: userEmail,
+		Name:  userName,
+	}, true
 }

@@ -1,0 +1,42 @@
+# Политика аудита на основе классификации
+audit_policy:
+  
+  public:
+    log_select: false        # Не логируем чтение публичных данных
+    log_update: true         # Но логируем изменения
+    log_delete: true
+    log_export: false
+    retention_days: 30
+    requires_approval: false
+    encrypt_at_rest: false
+    mask_in_logs: false
+
+  internal:
+    log_select: false        # Обычно не логируем
+    log_update: true
+    log_delete: true
+    log_export: true         # Экспорт логируем
+    retention_days: 90
+    requires_approval: false
+    encrypt_at_rest: false
+    mask_in_logs: false
+
+  confidential:
+    log_select: true         # Чтение логируем
+    log_update: true
+    log_delete: true
+    log_export: true
+    retention_days: 365
+    requires_approval: false
+    encrypt_at_rest: true    # Шифруем в БД
+    mask_in_logs: true       # Маскируем в логах
+
+  restricted:
+    log_select: true         # Всегда логируем
+    log_update: true
+    log_delete: true
+    log_export: true
+    retention_days: 2555     # 7 лет
+    requires_approval: true  # Требуется одобрение для доступа
+    encrypt_at_rest: true
+    mask_in_logs: true       # Полная маскировка

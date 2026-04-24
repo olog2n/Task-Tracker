@@ -1,0 +1,89 @@
+# Реестр классификации данных
+data_classification:
+  
+  # Пользователь
+  user:
+    id:
+      type: technical
+      classification: internal
+    email:
+      type: personal
+      classification: confidential
+    phone:
+      type: personal
+      classification: confidential
+    full_name:
+      type: personal
+      classification: confidential
+    position:
+      type: personal
+      classification: confidential
+    passport/snils/inn:
+      type: personal_special
+      classification: restricted
+    password_hash:
+      type: credentials
+      classification: restricted
+
+  # Задача
+  task:
+    id:
+      type: technical
+      classification: internal
+    title:
+      type: business
+      classification: internal  # Может быть overridden на уровне задачи
+    description:
+      type: business
+      classification: internal
+    comments:
+      type: business+personal
+      classification: confidential
+    attachments:
+      type: file
+      classification: inherited  # From task
+    status_history:
+      type: audit
+      classification: confidential
+    priority:
+      type: business
+      classification: internal
+    assignee_id:
+      type: personal
+      classification: confidential
+
+  project:
+    name:
+      type: business
+      classification: public  # public/internal
+    description:
+      type: business
+      classification: internal
+    roadmap:
+      type: business_secret
+      classification: confidential
+    budget:
+      type: financial
+      classification: restricted
+    hourly_rates:
+      type: financial
+      classification: restricted
+
+  integration:
+    api_keys:
+      type: secret
+      classification: restricted
+    webhook_configs:
+      type: technical
+      classification: confidential
+    tokens:
+      type: secret
+      classification: restricted
+
+  audit:
+    audit_events:
+      type: audit
+      classification: confidential
+    error_logs:
+      type: technical
+      classification: internal

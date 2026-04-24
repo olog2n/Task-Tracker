@@ -3,6 +3,8 @@ package model
 import (
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type RegisterInput struct {
@@ -23,8 +25,9 @@ type AuthResponse struct {
 }
 
 type User struct {
-	ID                   int           `json:"id"`
+	ID                   uuid.UUID     `json:"id"`
 	Email                string        `json:"email"`
+	Name                 string        `json:"name"`
 	PasswordHash         string        `json:"-"`
 	IsActive             bool          `json:"is_active"`
 	DeletedAt            sql.NullTime  `json:"deveted_at,omitempty"`
@@ -46,6 +49,6 @@ func (u *User) CanLogin() bool {
 }
 
 // TODO: Update it with correct roles
-func (u *User) IsAdmin() bool {
-	return u.ID == 1 //NOTE: Boilerplate, first user is admin
-}
+// func (u *User) IsAdmin() bool {
+// 	return u.ID == 1 //NOTE: Boilerplate, first user is admin
+// }

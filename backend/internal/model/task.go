@@ -1,95 +1,131 @@
 package model
 
 import (
-	"database/sql"
 	"encoding/json"
-	"fmt"
-	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-var ErrUnknownStatus = fmt.Errorf("unknown task status")
-
 type TaskID int
-type TaskStatus int
-
-var statusName = map[TaskStatus]string{
-	StatusBacklog:    "backlog",
-	StatusInProgress: "in_progress",
-	StatusReview:     "review",
-	StatusDone:       "done",
-	StatusCancelled:  "cancelled",
-}
 
 type Task struct {
-	ID          TaskID        `json:"id"`
-	ProjectID   sql.NullInt64 `json:"project_id,omitempty"` // (nullable)
-	Title       string        `json:"title"`
-	Author      string        `json:"author"`              // Email
-	AuthorID    sql.NullInt64 `json:"author_id,omitempty"` // FK (nullable)
-	Description string        `json:"description"`
-	Executor    string        `json:"executor"`
-	Status      TaskStatus    `json:"status"`
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	Title       string    `json:"title" db:"title"`
+	Description string    `json:"description" db:"description"`
+
+	StatusID uuid.UUID `json:"status_id" db:"status_id"`
+	Status   *Status   `json:"status,omitempty" db:"-"`
+
+	Priority   string     `json:"priority" db:"priority"`
+	ProjectID  uuid.UUID  `json:"project_id" db:"project_id"`
+	AssigneeID *uuid.UUID `json:"assignee_id" db:"assignee_id"`
+	CreatedBy  uuid.UUID  `json:"created_by" db:"created_by"`
+	UpdatedBy  *uuid.UUID `json:"updated_by" db:"updated_by"`
+	DeletedBy  *uuid.UUID `json:"deleted_by,omitempty" db:"deleted_by"`
+
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
+
+	Classification DataClassification `json:"classification" db:"cassification"` // internal/confidential/restricted
+	IsSensitive    bool               `json:"is_sensitive" db:"is_sensitive"`    //Для быстрого поиска, но в перспективе стоит удалить
 }
 
+// ============================================================================
+// TaskInput — данные для создания/обновления задачи
+// ============================================================================
+type TaskInput struct {
+	Title       string     `json:"title" validate:"required,min=1,max=500"`
+	Description string     `json:"description" validate:"max=10000"`
+	StatusID    *uuid.UUID `json:"status_id,omitempty"`
+	Priority    string     `json:"priority" validate:"oneof=low medium high"`
+	AssigneeID  *uuid.UUID `json:"assignee_id,omitempty"`
+	ProjectID   *uuid.UUID `json:"project_id,omitempty"`
+}
+
+// ============================================================================
+// TaskFilter — фильтры для поиска задач
+// ============================================================================
+type TaskFilter struct {
+	ProjectID      *uuid.UUID         `json:"project_id,omitempty"`
+	AssigneeID     *uuid.UUID         `json:"assignee_id,omitempty"`
+	StatusID       *uuid.UUID         `json:"status_id,omitempty"`
+	Priority       string             `json:"priority,omitempty"`
+	Search         string             `json:"search,omitempty"`
+	Classification DataClassification `json:"classification,omitempty"`
+	Sensitive      *bool              `json:"sensitive,omitempty"`
+	SortBy         string             `json:"sort_by,omitempty"`
+	SortOrder      string             `json:"sort_order,omitempty"`
+	Limit          int                `json:"limit"`
+	Offset         int                `json:"offset"`
+}
+
+// ============================================================================
+// TaskList — ответ со списком задач (с пагинацией)
+// ============================================================================
+type TaskList struct {
+	Tasks   []*Task `json:"tasks"`
+	Total   int     `json:"total"`
+	Limit   int     `json:"limit"`
+	Offset  int     `json:"offset"`
+	HasMore bool    `json:"has_more"`
+}
+
+// ============================================================================
+// PaginatedTask — ответ со списком задач (с пагинацией)
+// ============================================================================
 type PaginatedTasks struct {
-	Tasks  []Task `json:"tasks"`
-	Total  int    `json:"total"`
-	Limit  int    `json:"limit"`
-	Offset int    `json:"offset"`
+	Tasks   []*Task `json:"tasks"`
+	Total   int     `json:"total"`
+	Limit   int     `json:"limit"`
+	Offset  int     `json:"offset"`
+	HasMore bool    `json:"has_more"`
 }
 
-func FromString(str string) (TaskStatus, error) {
-	str = strings.ToLower(strings.TrimSpace(str))
+// ============================================================================
+// Методы Task
+// ============================================================================
 
-	switch str {
-	case "backlog":
-		return StatusBacklog, nil
-	case "in_progress":
-		return StatusInProgress, nil
-	case "review":
-		return StatusReview, nil
-	case "done":
-		return StatusDone, nil
-	case "cancelled":
-		return StatusCancelled, nil
-	default:
-		return StatusBacklog, fmt.Errorf("%w: %s", ErrUnknownStatus, str)
+func (t *Task) GetDataFields() map[string]DataField {
+	return map[string]DataField{
+		"title":       {Name: "title", DataType: DataTypeBusiness, Classification: t.Classification},
+		"description": {Name: "description", DataType: DataTypeBusiness, Classification: t.Classification},
+		"assignee_id": {Name: "assignee_id", DataType: DataTypePersonal, Classification: ClassificationConfidential},
+		"priority":    {Name: "priority", DataType: DataTypeBusiness, Classification: ClassificationInternal},
 	}
 }
 
-func (ts TaskStatus) ToString() string {
-	return statusName[ts]
-}
-
-func (ts TaskStatus) MarshalJSON() ([]byte, error) {
-	return json.Marshal(statusName[ts])
-}
-
-func (ts *TaskStatus) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return err
+// GetAuditLevel — возвращает уровень классификации для аудита
+func (t *Task) GetAuditLevel() DataClassification {
+	// Если задача помечена как чувствительная — сразу confidential
+	if t.IsSensitive {
+		return ClassificationConfidential
 	}
 
-	switch s {
-	case "backlog":
-		*ts = StatusBacklog
-	case "in_progress":
-		*ts = StatusInProgress
-	case "review":
-		*ts = StatusReview
-	case "done":
-		*ts = StatusDone
-	case "cancelled":
-		*ts = StatusCancelled
-	default:
-		return fmt.Errorf("unknown status: %s", s)
+	// Если есть назначенный исполнитель — минимум confidential (ПДн)
+	if t.AssigneeID != nil {
+		return ClassificationConfidential
 	}
 
-	return nil
+	// Иначе используем классификацию задачи
+	return t.Classification
+}
+
+// GetStatusName — удобное получение имени статуса
+func (t *Task) GetStatusName() string {
+	if t.Status != nil {
+		return t.Status.Name
+	}
+	return ""
+}
+
+// GetStatusColor — удобное получение цвета статуса (для UI)
+func (t *Task) GetStatusColor() string {
+	if t.Status != nil {
+		return t.Status.Color
+	}
+	return "#6b7280" // default gray
 }
 
 func (ti TaskID) MarshalJSON() ([]byte, error) {
