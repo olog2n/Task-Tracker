@@ -293,13 +293,11 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 		filter.ProjectID = projectID
 	}
 
-	if assigneeID := r.URL.Query().Get("assignee_id"); assigneeID != "" {
-		id, err := strconv.Atoi(assigneeID)
-		if err != nil {
-			RespondError(w, http.StatusBadRequest, "invalid assignee_id")
-			return
-		}
-		filter.AssigneeID = &id
+	if assigneeID, err := parseUUIDQuery(r, "assignee_id"); err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid assignee_id")
+		return
+	} else {
+		filter.AssigneeID = assigneeID
 	}
 
 	if statusID, err := parseUUIDQuery(r, "status_id"); err != nil {

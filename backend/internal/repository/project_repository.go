@@ -12,7 +12,7 @@ import (
 
 type ProjectRepository interface {
 	// Projects
-	CreateProject(ctx context.Context, project *model.Project) error
+	CreateProject(ctx context.Context, project *model.Project) (uuid.UUID, error)
 	GetProjectByID(ctx context.Context, id uuid.UUID) (*model.Project, error)
 	GetProjectsByOwner(ctx context.Context, ownerID uuid.UUID) ([]*model.Project, error)
 	GetAllProjects(ctx context.Context, limit, offset int) ([]*model.Project, error)
@@ -23,7 +23,7 @@ type ProjectRepository interface {
 	AddProjectMember(ctx context.Context, member *model.ProjectMember) error
 	GetProjectMembers(ctx context.Context, projectID uuid.UUID) ([]*model.ProjectMember, error)
 	GetMemberByID(ctx context.Context, projectID, userID uuid.UUID) (*model.ProjectMember, error)
-	UpdateMemberRole(ctx context.Context, projectID, userID uuid.UUID, role model.Role) error
+	UpdateMemberRole(ctx context.Context, projectID, userID uuid.UUID, role model.ProjectRole) error
 	RemoveMember(ctx context.Context, projectID, userID uuid.UUID) error
 
 	// // Access check helpers
@@ -39,7 +39,7 @@ func NewProjectRepository(db *sql.DB) ProjectRepository {
 	return &projectRepository{db: db}
 }
 
-func (r *projectRepository) CreateProject(ctx context.Context, project *model.Project) error {
+func (r *projectRepository) CreateProject(ctx context.Context, project *model.Project) (uuid.UUID, error) {
 	// Генерируем UUID если не задан
 	if project.ID == uuid.Nil {
 		project.ID = uuid.New()
@@ -63,14 +63,13 @@ func (r *projectRepository) CreateProject(ctx context.Context, project *model.Pr
 	)
 
 	if err != nil {
-		return 0, nil //NOTE: Boilerplate
-		// return ("failed to create project: %w", err)
+		return uuid.Nil, err
 	}
 
 	project.CreatedAt = now
 	project.UpdatedAt = now
 
-	return nil
+	return project.ID, nil
 }
 
 func (r *projectRepository) GetProjectByID(ctx context.Context, id uuid.UUID) (*model.Project, error) {
@@ -223,7 +222,7 @@ func (r *projectRepository) AddProjectMember(ctx context.Context, member *model.
 
 func (r *projectRepository) GetMember(ctx context.Context, projectID, userID uuid.UUID) (*model.ProjectMember, error) {
 	var m model.ProjectMember
-	var addedBy sql.NullInt64
+	var addedBy uuid.UUID
 
 	err := r.db.QueryRowContext(ctx,
 		`SELECT id, project_id, user_id, role, joined_at, added_by 
@@ -289,7 +288,7 @@ func (r *projectRepository) GetMemberByID(ctx context.Context, projectID, userID
 	return member, nil
 }
 
-func (r *projectRepository) UpdateMemberRole(ctx context.Context, projectID, userID uuid.UUID, role model.Role) error {
+func (r *projectRepository) UpdateMemberRole(ctx context.Context, projectID, userID uuid.UUID, role model.ProjectRole) error {
 	query := `UPDATE project_members SET role = ?, updated_at = ? WHERE project_id = ? AND user_id = ?`
 
 	_, err := r.db.ExecContext(ctx, query, role, time.Now(), projectID.String(), userID.String())

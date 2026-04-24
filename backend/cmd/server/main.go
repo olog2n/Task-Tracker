@@ -15,6 +15,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"tracker/docs"
+	"tracker/internal/audit"
 	"tracker/internal/auth"
 	"tracker/internal/config"
 	"tracker/internal/database"
@@ -54,6 +55,7 @@ func main() {
 	repos := initRepositories(db)
 
 	metadata := initMetadataService()
+	audit := initAuditService(repos, cfg)
 
 	handlers := initHandlers(
 		cfg,
@@ -61,6 +63,7 @@ func main() {
 		repos,
 		jwtService,
 		metadata,
+		audit,
 	)
 
 	router := initRouter(handlers, jwtService, repos)
@@ -112,10 +115,16 @@ func initMetadataService() *handler.MetadataService {
 	)
 }
 
+func initAuditService(repos *Repositories, cfg *config.Config) *audit.Logger {
+	log.Println("Initializing Logger service...")
+	return audit.NewLogger(repos.Audit, cfg)
+}
+
 type Repositories struct {
 	User    repository.UserRepository
 	Task    repository.TaskRepository
 	Project repository.ProjectRepository
+	Audit   repository.AuditRepository
 }
 
 func initRepositories(db *sql.DB) *Repositories {
@@ -124,6 +133,7 @@ func initRepositories(db *sql.DB) *Repositories {
 		User:    repository.NewUserRepository(db),
 		Task:    repository.NewTaskRepository(db),
 		Project: repository.NewProjectRepository(db),
+		Audit:   repository.NewAuditRepository(db),
 	}
 }
 
@@ -142,6 +152,7 @@ func initHandlers(
 	repos *Repositories,
 	jwtService *auth.JWTService,
 	metadata *handler.MetadataService,
+	audit *audit.Logger,
 ) *Handlers {
 	log.Println("Initializing handlers...")
 	return &Handlers{
@@ -154,7 +165,8 @@ func initHandlers(
 			cfg.Auth.CookieNameAccess,
 			cfg.Auth.CookieNameRefresh,
 		),
-		Task:    handler.NewTaskHandler(repos.Task),
+
+		Task:    handler.NewTaskHandler(repos.Task, audit),
 		Version: handler.NewVersionHandler(metadata),
 		Health:  handler.NewHealthHandler(metadata, db),
 		User:    handler.NewUserHandler(repos.User),
@@ -256,7 +268,7 @@ func runServer(cfg *config.Config, handler http.Handler) {
 	log.Println("Starting server...")
 
 	server := &http.Server{
-		Addr:         cfg.Server.Port,
+		Addr:         string(cfg.Server.Port),
 		Handler:      handler,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,

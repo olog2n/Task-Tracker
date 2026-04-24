@@ -36,7 +36,7 @@ func ProjectAuthMiddleware(projectRepo repository.ProjectRepository) func(http.H
 			}
 
 			// 3. Проверяем доступ к проекту
-			member, err := projectRepo.GetMember(ctx, projectID, userID)
+			member, err := projectRepo.GetMemberByID(ctx, projectID, userID)
 			if err == sql.ErrNoRows {
 				http.Error(w, "access denied to project", http.StatusForbidden)
 				return
@@ -47,8 +47,8 @@ func ProjectAuthMiddleware(projectRepo repository.ProjectRepository) func(http.H
 			}
 
 			// 4. Проверяем, активен ли проект
-			project, err := projectRepo.GetByID(ctx, projectID)
-			if err != nil || !project.IsActive {
+			_, err = projectRepo.GetProjectByID(ctx, projectID)
+			if err != nil {
 				http.Error(w, "project not found or inactive", http.StatusNotFound)
 				return
 			}
@@ -63,8 +63,8 @@ func ProjectAuthMiddleware(projectRepo repository.ProjectRepository) func(http.H
 	}
 }
 
-func GetProjectIDFromContext(r *http.Request) (int, bool) {
-	projectID, ok := r.Context().Value(ProjectIDKey).(int)
+func GetProjectIDFromContext(r *http.Request) (uuid.UUID, bool) {
+	projectID, ok := r.Context().Value(ProjectIDKey).(uuid.UUID)
 	return projectID, ok
 }
 

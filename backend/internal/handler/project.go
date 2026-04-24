@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"tracker/internal/model"
@@ -13,6 +12,7 @@ import (
 	"tracker/internal/tracemiddleware"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type ProjectHandler struct {
@@ -62,11 +62,11 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input.OwnerID = sql.NullInt64{Int64: int64(userID), Valid: true}
+	input.OwnerID = userID
 	input.CreatedAt = time.Now()
 	input.UpdatedAt = time.Now()
 
-	projectID, err := h.projectRepo.Create(ctx, &input)
+	projectID, err := h.projectRepo.CreateProject(ctx, &input)
 	if err != nil {
 		log.Printf("create project error: %v", err)
 		http.Error(w, "failed to create project", http.StatusInternalServerError)
@@ -74,19 +74,19 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	member := &model.ProjectMember{
-		ProjectID: int(projectID),
+		ProjectID: projectID,
 		UserID:    userID,
 		Role:      model.RoleProjectAdmin,
 		JoinedAt:  time.Now(),
-		AddedBy:   sql.NullInt64{Int64: int64(userID), Valid: true},
+		AddedBy:   userID,
 	}
-	if err := h.projectRepo.AddMember(ctx, member); err != nil {
+	if err := h.projectRepo.AddProjectMember(ctx, member); err != nil {
 		log.Printf("add member error: %v", err)
 		http.Error(w, "failed to add project owner as member", http.StatusInternalServerError)
 		return
 	}
 
-	input.ID = int(projectID)
+	input.ID = projectID
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(input)
@@ -107,13 +107,13 @@ func (h *ProjectHandler) GetProjects(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	userID, ok := tracemiddleware.GetUserIDFromContext(r)
+	_, ok := tracemiddleware.GetUserIDFromContext(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	projects, err := h.projectRepo.GetAll(ctx, userID)
+	projects, err := h.projectRepo.GetAllProjects(ctx, 50, 0)
 	if err != nil {
 		log.Printf("get projects error: %v", err)
 		http.Error(w, "failed to get projects", http.StatusInternalServerError)
@@ -121,7 +121,7 @@ func (h *ProjectHandler) GetProjects(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if projects == nil {
-		projects = make([]model.Project, 0)
+		projects = make([]*model.Project, 0)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -152,7 +152,7 @@ func (h *ProjectHandler) GetProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	project, err := h.projectRepo.GetByID(ctx, projectID)
+	project, err := h.projectRepo.GetProjectByID(ctx, projectID)
 	if err == sql.ErrNoRows {
 		http.Error(w, "project not found", http.StatusNotFound)
 		return
@@ -196,7 +196,7 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 
 	projectID, _ := tracemiddleware.GetProjectIDFromContext(r)
 
-	var input model.Project
+	var input model.ProjectInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
@@ -207,10 +207,7 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input.ID = projectID
-	input.UpdatedAt = time.Now()
-
-	if err := h.projectRepo.Update(ctx, &input); err != nil {
+	if _, err := h.projectRepo.UpdateProject(ctx, projectID, &input, member.ID); err != nil {
 		log.Printf("update project error: %v", err)
 		http.Error(w, "failed to update project", http.StatusInternalServerError)
 		return
@@ -246,7 +243,7 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 
 	projectID, _ := tracemiddleware.GetProjectIDFromContext(r)
 
-	if err := h.projectRepo.Delete(ctx, projectID); err != nil {
+	if err := h.projectRepo.DeleteProject(ctx, projectID); err != nil {
 		log.Printf("delete project error: %v", err)
 		http.Error(w, "failed to delete project", http.StatusInternalServerError)
 		return
@@ -278,7 +275,7 @@ func (h *ProjectHandler) GetMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	members, err := h.projectRepo.GetMembers(ctx, projectID)
+	members, err := h.projectRepo.GetProjectMembers(ctx, projectID)
 	if err != nil {
 		log.Printf("get members error: %v", err)
 		http.Error(w, "failed to get members", http.StatusInternalServerError)
@@ -286,7 +283,7 @@ func (h *ProjectHandler) GetMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if members == nil {
-		members = make([]model.ProjectMember, 0)
+		members = make([]*model.ProjectMember, 0)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -322,7 +319,7 @@ func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	projectID, _ := tracemiddleware.GetProjectIDFromContext(r)
 
 	var input struct {
-		UserID int               `json:"user_id"`
+		UserID uuid.UUID         `json:"user_id"`
 		Role   model.ProjectRole `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -330,7 +327,7 @@ func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if input.UserID == 0 {
+	if input.UserID == uuid.Nil {
 		http.Error(w, "user_id is required", http.StatusBadRequest)
 		return
 	}
@@ -353,10 +350,10 @@ func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 		UserID:    input.UserID,
 		Role:      input.Role,
 		JoinedAt:  time.Now(),
-		AddedBy:   sql.NullInt64{Int64: int64(member.UserID), Valid: true},
+		AddedBy:   member.UserID,
 	}
 
-	if err := h.projectRepo.AddMember(ctx, newMember); err != nil {
+	if err := h.projectRepo.AddProjectMember(ctx, newMember); err != nil {
 		log.Printf("add member error: %v", err)
 		http.Error(w, "failed to add member", http.StatusInternalServerError)
 		return
@@ -396,7 +393,7 @@ func (h *ProjectHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request
 
 	projectID, _ := tracemiddleware.GetProjectIDFromContext(r)
 	userIDStr := chi.URLParam(r, "user_id")
-	userID, err := strconv.Atoi(userIDStr)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		http.Error(w, "invalid user_id", http.StatusBadRequest)
 		return
@@ -450,7 +447,7 @@ func (h *ProjectHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 
 	projectID, _ := tracemiddleware.GetProjectIDFromContext(r)
 	userIDStr := chi.URLParam(r, "user_id")
-	userID, err := strconv.Atoi(userIDStr)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		http.Error(w, "invalid user_id", http.StatusBadRequest)
 		return
