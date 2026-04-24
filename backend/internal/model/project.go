@@ -1,8 +1,9 @@
 package model
 
 import (
-	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type ProjectRole string
@@ -13,25 +14,37 @@ const (
 	RoleProjectViewer ProjectRole = "viewer" // Only Read
 )
 
+// ============================================================================
+// Project — проект в системе
+// ============================================================================
 type Project struct {
-	ID          int           `json:"id"`
-	Name        string        `json:"name"`
-	Description string        `json:"description"`
-	OwnerID     sql.NullInt64 `json:"owner_id"`
-	IsActive    bool          `json:"is_active"`
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at"`
-	DeletedAt   sql.NullTime  `json:"deleted_at,omitempty"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	Name        string     `json:"name" db:"name"`
+	Description string     `json:"description" db:"description"`
+	OwnerID     uuid.UUID  `json:"owner_id" db:"owner_id"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
+	DeletedAt   *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
+// ProjectInput — данные для создания/обновления проекта
+type ProjectInput struct {
+	Name        string     `json:"name" validate:"required,min=1,max=200"`
+	Description string     `json:"description" validate:"max=5000"`
+	OwnerID     *uuid.UUID `json:"owner_id,omitempty"`
+}
+
+// ============================================================================
+// ProjectMember — участник проекта
+// ============================================================================
 type ProjectMember struct {
-	ID        int           `json:"-"`
-	ProjectID int           `json:"project_id"`
-	UserID    int           `json:"user_id"`
-	Role      ProjectRole   `json:"role"`
-	JoinedAt  time.Time     `json:"joined_at"`
-	AddedBy   sql.NullInt64 `json:"added_by"`
-	UserEmail string        `json:"user_email,omitempty"`
+	ID        uuid.UUID   `json:"id" db:"id"`
+	ProjectID uuid.UUID   `json:"project_id" db:"project_id"`
+	UserID    uuid.UUID   `json:"user_id" db:"user_id"`
+	Role      ProjectRole `json:"role" db:"role"`
+	JoinedAt  time.Time   `json:"joined_at" db:"joined_at"`
+	AddedBy   uuid.UUID   `json:"added_by" db:"added_by"`
+	UpdatedAt time.Time   `json:"updated_at" db:"updated_at"`
 }
 
 func (m *ProjectMember) CanView() bool {

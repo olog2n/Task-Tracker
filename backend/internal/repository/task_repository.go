@@ -18,13 +18,13 @@ type TaskRepository interface {
 	Create(ctx context.Context, task *model.Task) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Task, error)
 	GetAll(ctx context.Context, filter *model.TaskFilter) (*model.PaginatedTasks, error)
-	Update(ctx context.Context, id uuid.UUID, input *model.TaskInput, updatedBy int) (*model.Task, error)
-	Delete(ctx context.Context, id uuid.UUID, deletedBy int) error
+	Update(ctx context.Context, id uuid.UUID, input *model.TaskInput, updatedBy uuid.UUID) (*model.Task, error)
+	Delete(ctx context.Context, id uuid.UUID, deletedBy uuid.UUID) error
 	GetByProject(ctx context.Context, projectID uuid.UUID) ([]*model.Task, error)
-	GetByAssignee(ctx context.Context, assigneeID int) ([]*model.Task, error)
+	GetByAssignee(ctx context.Context, assigneeID uuid.UUID) ([]*model.Task, error)
 
 	GetAvailableStatuses(ctx context.Context, projectID uuid.UUID) ([]*model.Status, error)
-	GetTransitionsForStatus(ctx context.Context, projectID, statusID int) ([]*model.Transition, error)
+	GetTransitionsForStatus(ctx context.Context, projectID, statusID uuid.UUID) ([]*model.Transition, error)
 }
 
 type taskRepository struct {
@@ -277,7 +277,7 @@ func (r *taskRepository) GetAll(ctx context.Context, filter *model.TaskFilter) (
 // ============================================================================
 // Update — обновление задачи
 // ============================================================================
-func (r *taskRepository) Update(ctx context.Context, id uuid.UUID, input *model.TaskInput, updatedBy int) (*model.Task, error) {
+func (r *taskRepository) Update(ctx context.Context, id uuid.UUID, input *model.TaskInput, updatedBy uuid.UUID) (*model.Task, error) {
 	updates := []string{}
 	args := []interface{}{}
 
@@ -323,7 +323,7 @@ func (r *taskRepository) Update(ctx context.Context, id uuid.UUID, input *model.
 // ============================================================================
 // Delete — мягкое удаление задачи (soft delete)
 // ============================================================================
-func (r *taskRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy int) error {
+func (r *taskRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy uuid.UUID) error {
 	query := `UPDATE tasks SET deleted_at = ?, deleted_by = ? WHERE id = ?`
 
 	_, err := r.db.ExecContext(ctx, query, time.Now(), deletedBy, id)
@@ -358,7 +358,7 @@ func (r *taskRepository) GetByProject(ctx context.Context, projectID uuid.UUID) 
 // ============================================================================
 // GetByAssignee — получение задач исполнителя
 // ============================================================================
-func (r *taskRepository) GetByAssignee(ctx context.Context, assigneeID int) ([]*model.Task, error) {
+func (r *taskRepository) GetByAssignee(ctx context.Context, assigneeID uuid.UUID) ([]*model.Task, error) {
 	query := `
 		SELECT 
 			t.id, t.title, t.description, t.status_id, t.priority,
@@ -451,7 +451,7 @@ func (r *taskRepository) GetAvailableStatuses(ctx context.Context, projectID uui
 	return statuses, nil
 }
 
-func (r *taskRepository) GetTransitionsForStatus(ctx context.Context, projectID, statusID int) ([]*model.Transition, error) {
+func (r *taskRepository) GetTransitionsForStatus(ctx context.Context, projectID, statusID uuid.UUID) ([]*model.Transition, error) {
 	query := `
 		SELECT t.* FROM transitions t
 		JOIN processes p ON t.process_id = p.id

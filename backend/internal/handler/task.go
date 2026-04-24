@@ -126,67 +126,6 @@ func (h *TaskHandler) GetTaskByID(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, http.StatusOK, task)
 }
 
-// CreateTask godoc
-// @Summary      Create a new task
-// @Tags         tasks
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        request body model.Task true "Task data"
-// @Success      201  {object}  model.Task
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Router       /api/tasks [post]
-// func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodPost {
-// 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-// 		return
-// 	}
-
-// 	ctx := r.Context()
-
-// 	userID, ok := tracemiddleware.GetUserIDFromContext(r)
-// 	if !ok || userID == 0 {
-// 		http.Error(w, "unauthorized", http.StatusUnauthorized)
-// 		return
-// 	}
-
-// 	var input model.Task
-// 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-// 		http.Error(w, "invalid JSON", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	if err := validateTask(&input); err != nil {
-// 		http.Error(w, err.Error(), http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	input.AuthorID = sql.NullInt64{Int64: int64(userID), Valid: ok}
-// 	input.CreatedAt = time.Now()
-// 	input.UpdatedAt = time.Now()
-// 	input.Status = model.StatusBacklog
-
-// 	result, err := h.repo.Create(ctx, &input)
-// 	if err != nil {
-// 		log.Printf("create error: %v", err)
-// 		http.Error(w, "database error", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	id, err := result.LastInsertId()
-// 	input.ID = model.TaskID(id)
-// 	if err != nil {
-// 		log.Printf("last insert id error: %v", err)
-// 		http.Error(w, "failed to get task id", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusCreated)
-// 	json.NewEncoder(w).Encode(input)
-// }
-
 // UpdateTask godoc
 // @Summary      Update a task
 // @Tags         tasks
@@ -214,7 +153,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	// Получаем userID из контекста (через middleware)
 	userID, ok := tracemiddleware.GetUserIDFromContext(r)
-	if !ok || userID == 0 {
+	if !ok || userID == uuid.Nil {
 		RespondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -241,7 +180,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	// Проверка прав: только создатель может редактировать
 	//TODO: Изменить поведение, нужно чтобы изменять задачу мог либо автор, либо кто-то выше него, например админ
-	if existing.CreatedBy != int(userID) {
+	if existing.CreatedBy != userID {
 		RespondError(w, http.StatusForbidden, "forbidden - only author can update this task")
 		return
 	}
@@ -259,7 +198,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedTask, err := h.repo.Update(ctx, id, &input, int(userID))
+	updatedTask, err := h.repo.Update(ctx, id, &input, userID)
 	if err != nil {
 		log.Printf("update error: %v", err)
 		RespondError(w, http.StatusInternalServerError, "database error")
@@ -267,7 +206,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, ok := tracemiddleware.GetUserFromContext(r)
-	if !ok || user.ID == 0 {
+	if !ok || user.ID == uuid.Nil {
 		RespondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -297,7 +236,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	user, ok := tracemiddleware.GetUserFromContext(r)
-	if !ok || user.ID == 0 {
+	if !ok || user.ID == uuid.Nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -347,7 +286,6 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 
 	filter := &model.TaskFilter{Limit: 50, Offset: 0}
 
-	// 👇 UUID фильтры
 	if projectID, err := parseUUIDQuery(r, "project_id"); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid project_id")
 		return
@@ -413,8 +351,20 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 // ============================================================================
-// Create — создание задачи (обновлено под StatusID)
+// Create — создание задачи
 // ============================================================================
+
+// CreateTask godoc
+// @Summary      Create a new task
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request body model.Task true "Task data"
+// @Success      201  {object}  model.Task
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Router       /api/tasks [post]
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user, _ := tracemiddleware.GetUserFromContext(r)
@@ -430,7 +380,6 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 👇 ProjectID: из query param UUID
 	projectID := uuid.Nil
 	if pid, err := parseUUIDQuery(r, "project_id"); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid project_id")
@@ -443,7 +392,6 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		projectID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	}
 
-	// 👇 StatusID: из input или дефолт
 	statusID := uuid.Nil
 	if input.StatusID != nil {
 		statusID = *input.StatusID

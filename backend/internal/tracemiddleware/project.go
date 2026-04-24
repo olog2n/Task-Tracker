@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
-	"strconv"
 	"tracker/internal/model"
 	"tracker/internal/repository"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 func ProjectAuthMiddleware(projectRepo repository.ProjectRepository) func(http.Handler) http.Handler {
@@ -18,12 +18,11 @@ func ProjectAuthMiddleware(projectRepo repository.ProjectRepository) func(http.H
 
 			// 1. Получаем project_id из URL
 			projectIDStr := chi.URLParam(r, "project_id")
+			projectID, err := uuid.Parse(projectIDStr)
 			if projectIDStr == "" {
 				http.Error(w, "project_id required", http.StatusBadRequest)
 				return
 			}
-
-			projectID, err := strconv.Atoi(projectIDStr)
 			if err != nil {
 				http.Error(w, "invalid project_id", http.StatusBadRequest)
 				return

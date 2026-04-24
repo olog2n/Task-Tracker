@@ -15,7 +15,9 @@ import (
 )
 
 type Claims struct {
-	UserID int `json:"user_id"`
+	UserID uuid.UUID `json:"user_id"`
+	Email  string    `json:"email"`
+	Name   string    `json:"name"`
 	jwt.RegisteredClaims
 }
 
@@ -107,12 +109,14 @@ func NewJWTService(algorithm, secret, privateKeyPEM, publicKeyPEM, keyID string,
 	return s, nil
 }
 
-func (s *JWTService) GenerateTokenPair(userID int) (*TokenPair, error) {
+func (s *JWTService) GenerateTokenPair(ID uuid.UUID, email, name string) (*TokenPair, error) {
 	now := time.Now()
 
 	// Access token
-	accessClaims := Claims{
-		UserID: userID,
+	accessClaims := &Claims{
+		UserID: ID,
+		Email:  email,
+		Name:   name,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessExpiry)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -132,7 +136,9 @@ func (s *JWTService) GenerateTokenPair(userID int) (*TokenPair, error) {
 
 	// Refresh token
 	refreshClaims := Claims{
-		UserID: userID,
+		UserID: ID,
+		Email:  email,
+		Name:   name,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.refreshExpiry)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -142,7 +148,7 @@ func (s *JWTService) GenerateTokenPair(userID int) (*TokenPair, error) {
 
 	refreshToken := jwt.NewWithClaims(s.algorithm, refreshClaims)
 	if s.keyID != "" {
-		refreshToken.Header["kid"] = s.keyID
+		refreshToken.Header["kid"] = s.keyID //TODO: Replace.
 	}
 
 	refreshString, err := s.signToken(refreshToken)
@@ -220,7 +226,7 @@ func (s *JWTService) RefreshAccessToken(refreshToken string) (*TokenPair, error)
 		_ = s.blacklist.Add(refreshToken, expiresAt)
 	}
 
-	return s.GenerateTokenPair(claims.UserID)
+	return s.GenerateTokenPair(claims.UserID, claims.Email, claims.Name)
 }
 
 func parseECDSAPrivateKey(pemStr string) (*ecdsa.PrivateKey, error) {

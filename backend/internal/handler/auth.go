@@ -169,7 +169,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenPair, err := h.jwt.GenerateTokenPair(user.ID)
+	tokenPair, err := h.jwt.GenerateTokenPair(user.ID, user.Email, user.Name)
 	if err != nil {
 		log.Printf("token error: %v", err)
 		http.Error(w, "failed to generate token", http.StatusInternalServerError)
@@ -227,7 +227,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	_ = h.userRepo.UpdateLastLogin(r.Context(), user.ID)
 
-	tokenPair, err := h.jwt.GenerateTokenPair(user.ID)
+	tokenPair, err := h.jwt.GenerateTokenPair(user.ID, user.Email, user.Name)
 	if err != nil {
 		log.Printf("token error: %v", err)
 		http.Error(w, "failed to generate token", http.StatusInternalServerError)

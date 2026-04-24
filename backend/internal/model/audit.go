@@ -57,7 +57,7 @@ type AuditInput struct {
 	OldValue       interface{}
 	NewValue       interface{}
 	Metadata       interface{}
-	Classification DataClassification `json:"classification"`
+	Classification DataClassification
 	IPAddress      string
 	UserAgent      string
 }

@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 
 	"tracker/internal/repository"
 	"tracker/internal/tracemiddleware"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type UserHandler struct {
@@ -45,6 +45,7 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//TODO: Update
 	currentUser, err := h.userRepo.GetByID(ctx, currentUserID)
 	if err != nil {
 		http.Error(w, "failed to get current user", http.StatusInternalServerError)
@@ -56,7 +57,7 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	idStr := chi.URLParam(r, "id")
-	userID, err := strconv.Atoi(idStr)
+	userID, err := uuid.Parse(idStr)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -123,7 +124,7 @@ func (h *UserHandler) ReactivateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	idStr := chi.URLParam(r, "id")
-	userID, err := strconv.Atoi(idStr)
+	userID, err := uuid.Parse(idStr)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return

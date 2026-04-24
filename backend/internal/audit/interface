@@ -1,0 +1,156 @@
+// package audit
+
+// import (
+// 	"context"
+// 	"net/http"
+
+// 	"tracker/internal/model"
+
+// 	"github.com/google/uuid"
+// )
+
+// // ============================================================================
+// // Logger — интерфейс системы аудита
+// // ============================================================================
+// //
+// // Отвечает за запись и чтение аудиторских событий.
+// // Реализация по умолчанию: запись в БД через repository.
+// // Альтернативные реализации: асинхронная очередь, внешний SIEM, файл.
+// //
+// // Все методы должны быть безопасны для конкурентного использования.
+// // Ошибки записи НЕ должны прерывать основной поток запроса (логировать и продолжать).
+// // ============================================================================
+// type Logger interface {
+// 	// ------------------------------------------------------------------------
+// 	// Core: Базовый метод логирования
+// 	// ------------------------------------------------------------------------
+
+// 	// Log — универсальный метод для записи аудита
+// 	//
+// 	// Параметры:
+// 	//   - ctx: контекст запроса (для отмены/таймаутов)
+// 	//   - r: HTTP-запрос (для IP, User-Agent)
+// 	//   - user: текущий пользователь (может быть nil для системных действий)
+// 	//   - action: тип действия (select/create/update/delete/export)
+// 	//   - targetType: тип сущности ("task", "project", "user")
+// 	//   - targetID: ID сущности (nil для массовых операций)
+// 	//   - classification: уровень чувствительности данных
+// 	//   - oldValue: старые значения (для update/delete)
+// 	//   - newValue: новые значения (для create/update)
+// 	//   - metadata: дополнительный контекст (transition_id, filters, etc.)
+// 	//
+// 	// Возвращает ошибку только если запись в БД не удалась.
+// 	// Ошибки логирования НЕ должны ломать основной поток запроса!
+// 	Log(
+// 		ctx context.Context,
+// 		r *http.Request,
+// 		user *model.User,
+// 		action model.ActionType,
+// 		targetType string,
+// 		targetID *uuid.UUID,
+// 		classification model.DataClassification,
+// 		oldValue, newValue interface{},
+// 		metadata map[string]interface{},
+// 	) error
+
+// 	// ------------------------------------------------------------------------
+// 	// Convenience: Wrapper-методы для задач (Task)
+// 	// ------------------------------------------------------------------------
+
+// 	// LogTaskViewed — логирование просмотра задачи
+// 	// Классификация: берётся из task.GetAuditLevel()
+// 	LogTaskViewed(ctx context.Context, r *http.Request, user *model.User, task *model.Task) error
+
+// 	// LogTaskCreated — логирование создания задачи
+// 	// Классификация: берётся из task.GetAuditLevel()
+// 	LogTaskCreated(ctx context.Context, r *http.Request, user *model.User, task *model.Task) error
+
+// 	// LogTaskUpdated — логирование обновления задачи
+// 	// Сравнивает oldTask/newTask, логирует только изменения
+// 	// Классификация: берётся из newTask.GetAuditLevel()
+// 	LogTaskUpdated(ctx context.Context, r *http.Request, user *model.User, oldTask, newTask *model.Task) error
+
+// 	// LogTaskDeleted — логирование удаления задачи
+// 	// Логирует задачу перед удалением (oldValue)
+// 	// Классификация: берётся из task.GetAuditLevel()
+// 	LogTaskDeleted(ctx context.Context, r *http.Request, user *model.User, task *model.Task) error
+
+// 	// LogStatusChanged — логирование смены статуса (отдельно для аналитики)
+// 	// Всегда классификация: Confidential (переходы — чувствительные данные)
+// 	LogStatusChanged(
+// 		ctx context.Context,
+// 		r *http.Request,
+// 		user *model.User,
+// 		taskID uuid.UUID,
+// 		oldStatusID, newStatusID uuid.UUID,
+// 		transitionName string,
+// 	) error
+
+// 	// ------------------------------------------------------------------------
+// 	// Convenience: Wrapper-методы для пользователей (User)
+// 	// ------------------------------------------------------------------------
+
+// 	// LogUserLogin — логирование входа пользователя
+// 	// Классификация: Confidential (аутентификация — ПДн)
+// 	// metadata: {"success": bool, "error": string?, "ip": string}
+// 	LogUserLogin(ctx context.Context, r *http.Request, user *model.User, success bool, errorMessage string) error
+
+// 	// LogUserLogout — логирование выхода пользователя
+// 	// Классификация: Internal
+// 	// metadata: {"ip": string}
+// 	LogUserLogout(ctx context.Context, r *http.Request, user *model.User) error
+
+// 	// ------------------------------------------------------------------------
+// 	// Convenience: Wrapper-методы для проектов (Project)
+// 	// ------------------------------------------------------------------------
+
+// 	// LogProjectViewed — логирование просмотра проекта
+// 	// Классификация: Internal (может быть Confidential для чувствительных проектов)
+// 	// metadata: {"project_name": string}
+// 	LogProjectViewed(ctx context.Context, r *http.Request, user *model.User, projectID uuid.UUID, projectName string) error
+
+// 	// ------------------------------------------------------------------------
+// 	// Convenience: Массовые и системные операции
+// 	// ------------------------------------------------------------------------
+
+// 	// LogBulkSelect — логирование массового чтения (списки задач)
+// 	// Не логирует если count < SelectBatchThreshold (настраивается в конфиге)
+// 	// Классификация: Internal
+// 	// metadata: {"count": int, "bulk": true, "filters": map}
+// 	LogBulkSelect(
+// 		ctx context.Context,
+// 		r *http.Request,
+// 		user *model.User,
+// 		targetType string,
+// 		count int,
+// 		filters map[string]interface{},
+// 	) error
+
+// 	// LogExport — логирование экспорта данных (всегда логируем!)
+// 	// Классификация: Confidential (экспорт = потенциальная утечка)
+// 	// metadata: {"export_type": string, "count": int, "filters": map}
+// 	LogExport(
+// 		ctx context.Context,
+// 		r *http.Request,
+// 		user *model.User,
+// 		exportType string,
+// 		count int,
+// 		filters map[string]interface{},
+// 	) error
+
+// 	// ------------------------------------------------------------------------
+// 	// Query: Методы для получения аудита (админка)
+// 	// ------------------------------------------------------------------------
+
+// 	// GetAuditLogByTarget — получить аудит по сущности (например, история задачи)
+// 	// Используется в: GET /api/audit/task/{id}
+// 	GetAuditLogByTarget(ctx context.Context, targetType string, targetID uuid.UUID, limit int) ([]*model.AuditLog, error)
+
+// 	// GetAuditLogByUser — получить аудит по пользователю (активность)
+// 	// Используется в: GET /api/audit/user/{id}
+// 	GetAuditLogByUser(ctx context.Context, userID uuid.UUID, limit int) ([]*model.AuditLog, error)
+
+// 	// GetAuditLogWithFilters — получить аудит с фильтрами (админка)
+// 	// Используется в: GET /api/audit?target_type=task&action=update&from=2024-01-01
+// 	GetAuditLogWithFilters(ctx context.Context, filters *AuditFilters) ([]*model.AuditLog, error)
+// }

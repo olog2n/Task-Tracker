@@ -49,6 +49,6 @@ func (u *User) CanLogin() bool {
 }
 
 // TODO: Update it with correct roles
-// func (u *User) IsAdmin() bool {
-// 	return u.ID == 1 //NOTE: Boilerplate, first user is admin
-// }
+func (u *User) IsAdmin() bool {
+	return true
+}

@@ -7,6 +7,8 @@ import (
 
 	"tracker/internal/auth"
 	"tracker/internal/model"
+
+	"github.com/google/uuid"
 )
 
 func AuthMiddleware(jwt *auth.JWTService, cookieName string) func(http.Handler) http.Handler {
@@ -41,13 +43,16 @@ func AuthMiddleware(jwt *auth.JWTService, cookieName string) func(http.Handler) 
 			}
 
 			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+			ctx = context.WithValue(ctx, UserEmailKey, claims.Email)
+			ctx = context.WithValue(ctx, UserNameKey, claims.Name)
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func GetUserIDFromContext(r *http.Request) (int, bool) {
-	userID, ok := r.Context().Value(UserIDKey).(int)
+func GetUserIDFromContext(r *http.Request) (uuid.UUID, bool) {
+	userID, ok := r.Context().Value(UserIDKey).(uuid.UUID)
 	return userID, ok
 }
 

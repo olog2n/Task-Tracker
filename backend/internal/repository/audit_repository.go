@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 
 	"tracker/internal/model"
+
+	"github.com/google/uuid"
 )
 
 type AuditRepository interface {
 	Log(ctx context.Context, input *model.AuditInput) error
-	GetByTarget(ctx context.Context, targetType string, targetID int, limit int) ([]*model.AuditLog, error)
-	GetByActor(ctx context.Context, actorID int, limit int) ([]*model.AuditLog, error)
+	GetByTarget(ctx context.Context, targetType string, targetID uuid.UUID, limit int) ([]*model.AuditLog, error)
+	GetByActor(ctx context.Context, actorID uuid.UUID, limit int) ([]*model.AuditLog, error)
 	GetWithFilters(ctx context.Context, filters *model.AuditFilters) ([]*model.AuditLog, error)
 }
 
@@ -61,12 +63,29 @@ func (r *auditRepo) Log(ctx context.Context, input *model.AuditInput) error {
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
+	var actorIDStr, targetIDStr *string
+	if input.ActorID != nil {
+		s := input.ActorID.String()
+		actorIDStr = &s
+	}
+	if input.TargetID != nil {
+		s := input.TargetID.String()
+		targetIDStr = &s
+	}
+
 	_, err := r.db.ExecContext(ctx, query,
-		input.ActorID, input.UserEmail, input.UserName,
-		input.Action, input.TargetType, input.TargetID,
-		oldValue, newValue, metadata,
+		actorIDStr,
+		input.UserEmail,
+		input.UserName,
+		input.Action,
+		input.TargetType,
+		targetIDStr,
+		oldValue,
+		newValue,
+		metadata,
 		string(input.Classification),
-		input.IPAddress, input.UserAgent)
+		input.IPAddress,
+		input.UserAgent)
 
 	return err
 }
@@ -74,7 +93,7 @@ func (r *auditRepo) Log(ctx context.Context, input *model.AuditInput) error {
 // ============================================================================
 // GetByTarget — получить аудит по сущности (например, история задачи)
 // ============================================================================
-func (r *auditRepo) GetByTarget(ctx context.Context, targetType string, targetID int, limit int) ([]*model.AuditLog, error) {
+func (r *auditRepo) GetByTarget(ctx context.Context, targetType string, targetID uuid.UUID, limit int) ([]*model.AuditLog, error) {
 	query := `
 		SELECT * FROM audit_log 
 		WHERE target_type = ? AND target_id = ? 
@@ -93,7 +112,7 @@ func (r *auditRepo) GetByTarget(ctx context.Context, targetType string, targetID
 // ============================================================================
 // GetByActor — получить аудит по пользователю (активность)
 // ============================================================================
-func (r *auditRepo) GetByActor(ctx context.Context, actorID int, limit int) ([]*model.AuditLog, error) {
+func (r *auditRepo) GetByActor(ctx context.Context, actorID uuid.UUID, limit int) ([]*model.AuditLog, error) {
 	query := `
 		SELECT * FROM audit_log 
 		WHERE actor_id = ? 
@@ -174,20 +193,20 @@ func (r *auditRepo) scanAuditLogs(rows *sql.Rows) ([]*model.AuditLog, error) {
 	var logs []*model.AuditLog
 	for rows.Next() {
 		log := &model.AuditLog{}
-		var classification string
+		var actorIDStr, targetIDStr, classificationStr sql.NullString
 
 		err := rows.Scan(
-			&log.ID,
-			&log.ActorID,
+			&log.ID, // uuid.UUID
+			&actorIDStr,
 			&log.UserEmail,
 			&log.UserName,
 			&log.Action,
 			&log.TargetType,
-			&log.TargetID,
+			&targetIDStr,
 			&log.OldValue,
 			&log.NewValue,
 			&log.Metadata,
-			&classification,
+			&classificationStr,
 			&log.IPAddress,
 			&log.UserAgent,
 			&log.CreatedAt,
@@ -196,16 +215,27 @@ func (r *auditRepo) scanAuditLogs(rows *sql.Rows) ([]*model.AuditLog, error) {
 			return nil, err
 		}
 
-		// Конвертируем string в DataClassification
-		log.Classification = model.DataClassification(classification)
+		if actorIDStr.Valid {
+			id, err := uuid.Parse(actorIDStr.String)
+			if err == nil {
+				log.ActorID = &id
+			}
+		}
+		if targetIDStr.Valid {
+			id, err := uuid.Parse(targetIDStr.String)
+			if err == nil {
+				log.TargetID = &id
+			}
+		}
+		if classificationStr.Valid {
+			log.Classification = model.DataClassification(classificationStr.String)
+		}
 
 		logs = append(logs, log)
 	}
-
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-
 	return logs, nil
 }
 

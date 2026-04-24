@@ -9,6 +9,8 @@ import (
 	"tracker/internal/config"
 	"tracker/internal/model"
 	"tracker/internal/repository"
+
+	"github.com/google/uuid"
 )
 
 // ============================================================================
@@ -72,7 +74,7 @@ func (l *Logger) Log(
 	user *model.User,
 	action model.ActionType,
 	targetType string,
-	targetID *int,
+	targetID *uuid.UUID,
 	classification model.DataClassification,
 	oldValue, newValue interface{},
 	metadata map[string]interface{},
@@ -110,7 +112,7 @@ func (l *Logger) Log(
 	}
 
 	// Шаг 6: Собираем данные для записи
-	actorID := (*int)(nil)
+	var actorID *uuid.UUID // TODO
 	userEmail := "system"
 	userName := "system"
 
@@ -341,7 +343,7 @@ func (l *Logger) LogTaskDeleted(ctx context.Context, r *http.Request, user *mode
 }
 
 // LogStatusChanged — логирование смены статуса (отдельно для аналитики)
-func (l *Logger) LogStatusChanged(ctx context.Context, r *http.Request, user *model.User, taskID int, oldStatusID, newStatusID int, transitionName string) error {
+func (l *Logger) LogStatusChanged(ctx context.Context, r *http.Request, user *model.User, taskID, oldStatusID, newStatusID uuid.UUID, transitionName string) error {
 	return l.Log(ctx, r, user,
 		model.ActionStatusChange, "task", &taskID,
 		model.ClassificationConfidential, // Смена статуса — confidential
@@ -386,7 +388,7 @@ func (l *Logger) LogUserLogout(ctx context.Context, r *http.Request, user *model
 }
 
 // LogProjectViewed — логирование просмотра проекта
-func (l *Logger) LogProjectViewed(ctx context.Context, r *http.Request, user *model.User, projectID int, projectName string) error {
+func (l *Logger) LogProjectViewed(ctx context.Context, r *http.Request, user *model.User, projectID uuid.UUID, projectName string) error {
 	return l.Log(ctx, r, user,
 		model.ActionSelect, "project", &projectID,
 		model.ClassificationInternal, // Проект — internal (может быть confidential)
@@ -438,12 +440,12 @@ func (l *Logger) LogBulkSelect(ctx context.Context, r *http.Request, user *model
 // ============================================================================
 
 // GetAuditLogByTarget — получить аудит по сущности (например, история задачи)
-func (l *Logger) GetAuditLogByTarget(ctx context.Context, targetType string, targetID int, limit int) ([]*model.AuditLog, error) {
+func (l *Logger) GetAuditLogByTarget(ctx context.Context, targetType string, targetID uuid.UUID, limit int) ([]*model.AuditLog, error) {
 	return l.repo.GetByTarget(ctx, targetType, targetID, limit)
 }
 
 // GetAuditLogByUser — получить аудит по пользователю (активность)
-func (l *Logger) GetAuditLogByUser(ctx context.Context, userID int, limit int) ([]*model.AuditLog, error) {
+func (l *Logger) GetAuditLogByUser(ctx context.Context, userID uuid.UUID, limit int) ([]*model.AuditLog, error) {
 	return l.repo.GetByActor(ctx, userID, limit)
 }
 

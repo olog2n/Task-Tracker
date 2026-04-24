@@ -5,16 +5,18 @@ import (
 	"database/sql"
 	"time"
 	"tracker/internal/model"
+
+	"github.com/google/uuid"
 )
 
 type UserRepository interface {
 	Create(ctx context.Context, user *model.User) error
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
-	GetByID(ctx context.Context, id int) (*model.User, error)
-	UpdateLastLogin(ctx context.Context, id int) error
-	Deactivate(ctx context.Context, userID, delettedBy int) error
-	Reactivate(ctx context.Context, userID, reactivatedBy int) error
-	IncrementTokenVersion(ctx context.Context, userID int) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
+	Deactivate(ctx context.Context, userID, delettedBy uuid.UUID) error
+	Reactivate(ctx context.Context, userID, reactivatedBy uuid.UUID) error
+	IncrementTokenVersion(ctx context.Context, userID uuid.UUID) error
 }
 
 type userRepository struct {
@@ -67,7 +69,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.U
 	return &u, nil
 }
 
-func (r *userRepository) GetByID(ctx context.Context, id int) (*model.User, error) {
+func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	var u model.User
 	var lastLogin, deletedAt, reactivatedAt sql.NullTime
 	var deletedBy, reactivatedBy sql.NullInt64
@@ -100,7 +102,7 @@ func (r *userRepository) GetByID(ctx context.Context, id int) (*model.User, erro
 	return &u, nil
 }
 
-func (r *userRepository) UpdateLastLogin(ctx context.Context, id int) error {
+func (r *userRepository) UpdateLastLogin(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE users SET last_login = ? WHERE id = ?`,
 		time.Now(), id,
@@ -109,7 +111,7 @@ func (r *userRepository) UpdateLastLogin(ctx context.Context, id int) error {
 }
 
 // Deactivate is a user "soft-delete"
-func (r *userRepository) Deactivate(ctx context.Context, userID, deletedBy int) error {
+func (r *userRepository) Deactivate(ctx context.Context, userID, deletedBy uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE users SET is_active = 0, deleted_at = ?, deleted_by = ? WHERE id = ?`,
 		time.Now(), deletedBy, userID,
@@ -117,7 +119,7 @@ func (r *userRepository) Deactivate(ctx context.Context, userID, deletedBy int) 
 	return err
 }
 
-func (r *userRepository) Reactivate(ctx context.Context, userID, reactivatedBy int) error {
+func (r *userRepository) Reactivate(ctx context.Context, userID, reactivatedBy uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE users SET 
             is_active = 1, 
@@ -132,7 +134,7 @@ func (r *userRepository) Reactivate(ctx context.Context, userID, reactivatedBy i
 	return err
 }
 
-func (r *userRepository) IncrementTokenVersion(ctx context.Context, userID int) error {
+func (r *userRepository) IncrementTokenVersion(ctx context.Context, userID uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE users SET token_version = token_version + 1 WHERE id = ?`,
 		userID,
