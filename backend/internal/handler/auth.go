@@ -112,11 +112,6 @@ func (h *AuthHandler) clearAuthCookies(w http.ResponseWriter) {
 //	@Failure	409		{object}	map[string]string
 //	@Router		/api/auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var input model.RegisterInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
@@ -200,11 +195,6 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 //	@Failure	401		{object}	map[string]string
 //	@Router		/api/auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var input model.LoginInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
@@ -226,8 +216,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
-
-	_ = h.userRepo.UpdateLastLogin(r.Context(), user.ID)
 
 	tokenPair, err := h.jwt.GenerateTokenPair(user.ID, user.Email, user.Name)
 	if err != nil {

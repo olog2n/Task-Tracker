@@ -1,31 +1,44 @@
 import { defineStore } from 'pinia'
-import api from '@/services/api'
+import { authService } from '@/services/authService'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
-    isAuthenticated: false
+    accessToken: localStorage.getItem('access_token'),
+    refreshToken: localStorage.getItem('refresh_token')
   }),
+
+  getters: {
+    isAuthenticated: (state) => !!state.accessToken,
+    userId: (state) => state.user?.id || null,
+    userEmail: (state) => state.user?.email || null
+  },
 
   actions: {
     async login(email, password) {
-      const response = await api.post('/auth/login', { email, password })
-      this.isAuthenticated = true
-      this.user = response.data.user
-      return response.data
+      const data = await authService.login(email, password)
+      this.accessToken = data.access_token
+      this.refreshToken = data.refresh_token
+      await this.fetchUser()
     },
 
     async register(email, password) {
-      const response = await api.post('/auth/register', { email, password })
-      this.isAuthenticated = true
-      this.user = response.data.user
-      return response.data
+      await authService.register(email, password)
     },
 
     async logout() {
-      await api.post('/auth/logout')
-      this.isAuthenticated = false
+      await authService.logout()
       this.user = null
+      this.accessToken = null
+      this.refreshToken = null
+    },
+
+    async fetchUser() {
+      try {
+        this.user = await authService.getCurrentUser()
+      } catch (error) {
+        this.user = null
+      }
     }
   }
 })
