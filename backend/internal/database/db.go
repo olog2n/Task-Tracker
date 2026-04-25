@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	// 👇 Импортируем ВСЕ драйверы (side-effect через _)
 	_ "github.com/go-sql-driver/mysql" // MySQL
 	_ "github.com/lib/pq"              // PostgreSQL
 	_ "modernc.org/sqlite"             // SQLite
@@ -73,11 +72,10 @@ func Migrate(driver, dsn string) error {
 		return fmt.Errorf("failed to build migrate DSN: %w", err)
 	}
 
-	// 👇 4. Используем NewWithSourceInstance (источник - инстанс, БД - строка!)
 	m, err := migrate.NewWithSourceInstance(
-		"iofs",       // 👈 Источник: embed-filesystem
-		sourceDriver, // 👈 Инстанс источника
-		migrateDSN,   // 👈 DSN для БД как строка (не инстанс!)
+		"iofs",
+		sourceDriver,
+		migrateDSN,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to init migrate: %w", err)
