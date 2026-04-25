@@ -8,9 +8,6 @@ import (
 
 	"tracker/internal/repository"
 	"tracker/internal/tracemiddleware"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
 
 type UserHandler struct {
@@ -21,16 +18,16 @@ func NewUserHandler(userRepo repository.UserRepository) *UserHandler {
 	return &UserHandler{userRepo: userRepo}
 }
 
-// @Summary      Deactivate a user
-// @Tags         users
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      int  true  "User ID"
-// @Success      204
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string  "Admin only"
-// @Failure      404  {object}  map[string]string
-// @Router       /api/users/{id} [delete]
+// @Summary	Deactivate a user
+// @Tags		users
+// @Produce	json
+// @Security	BearerAuth
+// @Param		id	path	int	true	"User ID"
+// @Success	204
+// @Failure	401	{object}	map[string]string
+// @Failure	403	{object}	map[string]string	"Admin only"
+// @Failure	404	{object}	map[string]string
+// @Router		/api/users/{id} [delete]
 func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -56,8 +53,7 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	userID, err := uuid.Parse(idStr)
+	userID, err := parseUUIDParam(r, "id")
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -89,16 +85,16 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// @Summary      Reactivate a user
-// @Tags         users
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      int  true  "User ID"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /api/users/{id}/reactivate [post]
+// @Summary	Reactivate a user
+// @Tags		users
+// @Produce	json
+// @Security	BearerAuth
+// @Param		id	path		int	true	"User ID"
+// @Success	200	{object}	map[string]interface{}
+// @Failure	401	{object}	map[string]string
+// @Failure	403	{object}	map[string]string
+// @Failure	404	{object}	map[string]string
+// @Router		/api/users/{id}/reactivate [post]
 func (h *UserHandler) ReactivateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -123,8 +119,7 @@ func (h *UserHandler) ReactivateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	userID, err := uuid.Parse(idStr)
+	userID, err := parseUUIDParam(r, "id")
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return

@@ -1,8 +1,28 @@
+//	@title			Tracker API
+//	@version		0.2.0
+//	@description	Issue Tracker API с UUID, аудитом и процессами
+//	@termsOfService	http://swagger.io/terms/
+
+//	@contact.name	API Support
+//	@contact.email	support@example.com
+
+//	@license.name	MPL-2.0
+//	@license.url	https://opensource.org/license/mpl-2-0
+
+//	@host		localhost:6969
+//	@BasePath	/
+
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				Enter your access token in the format: Bearer {token}
+
 package main
 
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -23,26 +43,6 @@ import (
 	"tracker/internal/repository"
 	"tracker/internal/tracemiddleware"
 )
-
-// @title           Issue Tracker API
-// @version         0.1.0
-// @description     Простой и быстрый трекер задач с JWT аутентификацией
-// @termsOfService  http://swagger.io/terms/
-
-// @contact.name   API Support
-// @contact.url    http://www.swagger.io/support
-// @contact.email  support@swagger.io
-
-// @license.name   GPLv3
-// @license.url    https://opensource.org/license/gpl-3.0
-
-// @host      localhost:6969
-// @BasePath  /
-
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description Введите токен в формате: "Bearer <token>"
 
 func main() {
 	cfg := loadConfig()
@@ -188,7 +188,7 @@ func initRouter(handlers *Handlers, jwtService *auth.JWTService, repos *Reposito
 
 	// Swagger UI
 	docs.SwaggerInfo.Title = "Issue Tracker API"
-	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Version = "0.2.0"
 	docs.SwaggerInfo.Description = "Simple and fast task tracker with jwt auth"
 	docs.SwaggerInfo.Host = "localhost:6969"
 	docs.SwaggerInfo.BasePath = "/"
@@ -225,7 +225,7 @@ func initRouter(handlers *Handlers, jwtService *auth.JWTService, repos *Reposito
 			r.Route("/{project_id}", func(r chi.Router) {
 				r.Use(tracemiddleware.ProjectAuthMiddleware(repos.Project))
 
-				r.Get("/", handlers.Project.GetProject)
+				r.Get("/", handlers.Project.GetProjectById)
 				r.Put("/", handlers.Project.UpdateProject)
 				r.Delete("/", handlers.Project.DeleteProject)
 
@@ -238,8 +238,8 @@ func initRouter(handlers *Handlers, jwtService *auth.JWTService, repos *Reposito
 				})
 
 				r.Route("/members", func(r chi.Router) {
-					r.Get("/", handlers.Project.GetMembers)
-					r.Post("/", handlers.Project.AddMember)
+					r.Get("/", handlers.Project.GetProjectMembers)
+					r.Post("/", handlers.Project.AddProjectMember)
 					r.Put("/{user_id}", handlers.Project.UpdateMemberRole)
 					r.Delete("/{user_id}", handlers.Project.RemoveMember)
 				})
@@ -266,9 +266,12 @@ func initRouter(handlers *Handlers, jwtService *auth.JWTService, repos *Reposito
 
 func runServer(cfg *config.Config, handler http.Handler) {
 	log.Println("Starting server...")
+	//NOTE: It happens because of different types, port is int, but http.Server wants string with ":"
+	//TODO: Refactoring
+	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 
 	server := &http.Server{
-		Addr:         string(cfg.Server.Port),
+		Addr:         addr,
 		Handler:      handler,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
@@ -276,7 +279,7 @@ func runServer(cfg *config.Config, handler http.Handler) {
 	}
 
 	go func() {
-		log.Printf("Server listening on %s", cfg.Server.Port)
+		log.Printf("Server listening on %d", cfg.Server.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed: %v", err)
 		}

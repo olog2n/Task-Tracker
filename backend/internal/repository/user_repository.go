@@ -38,8 +38,8 @@ func (r *userRepository) Create(ctx context.Context, user *model.User) error {
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	var u model.User
-	var lastLogin, deletedAt, reactivatedAt sql.NullTime
-	var deletedBy, reactivatedBy sql.NullInt64
+	var lastLogin, deletedAt, reactivatedAt time.Time
+	var deletedBy, reactivatedBy uuid.UUID
 
 	err := r.db.QueryRowContext(ctx,
 		`SELECT id, email, password_hash, is_active, deleted_at, deleted_by, 
@@ -62,7 +62,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.U
 	u.ReactivatedAt = reactivatedAt
 	u.ReactivatedBy = reactivatedBy
 
-	if lastLogin.Valid {
+	if lastLogin.Compare(u.LastLogin) == 1 {
 		u.LastLogin = lastLogin
 	}
 
@@ -71,8 +71,8 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.U
 
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	var u model.User
-	var lastLogin, deletedAt, reactivatedAt sql.NullTime
-	var deletedBy, reactivatedBy sql.NullInt64
+	var lastLogin, deletedAt, reactivatedAt time.Time
+	var deletedBy, reactivatedBy uuid.UUID
 
 	err := r.db.QueryRowContext(ctx,
 		`SELECT id, email, password_hash, is_active, deleted_at, deleted_by, 
@@ -95,7 +95,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User
 	u.ReactivatedAt = reactivatedAt
 	u.ReactivatedBy = reactivatedBy
 
-	if lastLogin.Valid {
+	if lastLogin.Compare(u.LastLogin) == 1 {
 		u.LastLogin = lastLogin
 	}
 

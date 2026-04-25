@@ -32,75 +32,20 @@ func NewTaskHandler(
 	}
 }
 
-// GetTasks godoc
-// @Summary      Get all tasks
-// @Description  Get list of all tasks with pagination
-// @Tags         tasks
-// @Produce      json
-// @Security     BearerAuth
-// @Param        limit  query    int  false  "Items per page"  default(20)  minimum(1)  maximum(100)
-// @Param        offset query    int  false  "Offset"          default(0)   minimum(0)
-// @Success      200  {object}  PaginatedTasks
-// @Failure      401  {object}  map[string]string
-// @Router       /api/tasks [get]
-// func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodGet {
-// 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-// 		return
-// 	}
-
-// 	ctx := r.Context()
-
-// 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-// 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-
-// 	if limit <= 0 {
-// 		limit = 20
-// 	}
-// 	if limit > 100 {
-// 		limit = 100
-// 	}
-// 	if offset < 0 {
-// 		offset = 0
-// 	}
-
-// 	tasks, err := h.repo.GetWithPagination(ctx, limit, offset)
-// 	if err != nil {
-// 		log.Printf("repo error: %v", err)
-// 		http.Error(w, "database error", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	total, _ := h.repo.Count(ctx)
-
-// 	if tasks == nil {
-// 		tasks = make([]model.Task, 0)
-// 	}
-
-// 	response := model.PaginatedTasks{
-// 		Tasks:  tasks,
-// 		Total:  total,
-// 		Limit:  limit,
-// 		Offset: offset,
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(response)
-// }
-
 // GetTaskByID godoc
-// @Summary      Get a task by ID
-// @Description  Get detailed information about a specific task by its ID. Only the task author can access this endpoint.
-// @Tags         tasks
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      int  true  "Task ID"  minimum(1)
-// @Success      200  {object}  model.Task
-// @Failure      400  {object}  map[string]string  "Invalid ID format"
-// @Failure      401  {object}  map[string]string  "Unauthorized - Invalid or missing token"
-// @Failure      404  {object}  map[string]string  "Task not found"
-// @Router       /api/tasks/{id} [get]
+//
+//	@Summary		Get a task by ID
+//	@Description	Get detailed information about a specific task by its ID. Only the task author can access this endpoint.
+//	@Tags			tasks
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"Task ID"	minimum(1)
+//	@Success		200	{object}	model.Task
+//	@Failure		400	{object}	map[string]string	"Invalid ID format"
+//	@Failure		401	{object}	map[string]string	"Unauthorized - Invalid or missing token"
+//	@Failure		404	{object}	map[string]string	"Task not found"
+//	@Router			/api/tasks/{id} [get]
 func (h *TaskHandler) GetTaskByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user, _ := tracemiddleware.GetUserFromContext(r)
@@ -127,19 +72,21 @@ func (h *TaskHandler) GetTaskByID(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateTask godoc
-// @Summary      Update a task
-// @Tags         tasks
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      int true "Task ID"
-// @Param        request body model.Task true "Task data"
-// @Success      200  {object}  model.Task
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string  "Forbidden - Not the author"
-// @Failure      404  {object}  map[string]string
-// @Router       /api/tasks/{id} [put]
+//
+//	@Summary	Update a task
+//	@Tags		tasks
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id		path		int			true	"Task ID"
+//	@Param		request	body		model.Task	true	"Task data"
+//	@Success	200		{object}	model.Task
+//	@Failure	400		{object}	map[string]string
+//	@Failure	401		{object}	map[string]string
+//	@Failure	403		{object}	map[string]string	"Forbidden - Not the author"
+//	@Failure	404		{object}	map[string]string
+//	@Router		/api/tasks/{id} [put]
+//
 // ============================================================================
 // UpdateTask — обновление задачи
 // ============================================================================
@@ -222,16 +169,17 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteTask godoc
-// @Summary      Delete a task
-// @Tags         tasks
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      int true "Task ID"
-// @Success      204
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string  "Forbidden - Not the author"
-// @Failure      404  {object}  map[string]string
-// @Router       /api/tasks/{id} [delete]
+//
+//	@Summary	Delete a task
+//	@Tags		tasks
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		id	path	int	true	"Task ID"
+//	@Success	204
+//	@Failure	401	{object}	map[string]string
+//	@Failure	403	{object}	map[string]string	"Forbidden - Not the author"
+//	@Failure	404	{object}	map[string]string
+//	@Router		/api/tasks/{id} [delete]
 func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -241,8 +189,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idStr)
+	id, err := parseUUIDParam(r, "project_id")
 	if err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid task id")
 		return
@@ -286,25 +233,25 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 
 	filter := &model.TaskFilter{Limit: 50, Offset: 0}
 
-	if projectID, err := parseUUIDQuery(r, "project_id"); err != nil {
+	if projectID, err := parseUUIDParam(r, "project_id"); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid project_id")
 		return
-	} else if projectID != nil {
-		filter.ProjectID = projectID
+	} else if projectID != uuid.Nil {
+		filter.ProjectID = &projectID
 	}
 
-	if assigneeID, err := parseUUIDQuery(r, "assignee_id"); err != nil {
+	if assigneeID, err := parseUUIDParam(r, "assignee_id"); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid assignee_id")
 		return
 	} else {
-		filter.AssigneeID = assigneeID
+		filter.AssigneeID = &assigneeID
 	}
 
-	if statusID, err := parseUUIDQuery(r, "status_id"); err != nil {
+	if statusID, err := parseUUIDParam(r, "status_id"); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid status_id")
 		return
-	} else if statusID != nil {
-		filter.StatusID = statusID
+	} else if statusID != uuid.Nil {
+		filter.StatusID = &statusID
 	}
 
 	filter.Priority = r.URL.Query().Get("priority")
@@ -353,16 +300,17 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 // ============================================================================
 
 // CreateTask godoc
-// @Summary      Create a new task
-// @Tags         tasks
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        request body model.Task true "Task data"
-// @Success      201  {object}  model.Task
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Router       /api/tasks [post]
+//
+//	@Summary	Create a new task
+//	@Tags		tasks
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		request	body		model.Task	true	"Task data"
+//	@Success	201		{object}	model.Task
+//	@Failure	400		{object}	map[string]string
+//	@Failure	401		{object}	map[string]string
+//	@Router		/api/tasks [post]
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user, _ := tracemiddleware.GetUserFromContext(r)
@@ -379,11 +327,11 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	projectID := uuid.Nil
-	if pid, err := parseUUIDQuery(r, "project_id"); err != nil {
+	if pid, err := parseUUIDParam(r, "project_id"); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid project_id")
 		return
-	} else if pid != nil {
-		projectID = *pid
+	} else if pid != uuid.Nil {
+		projectID = pid
 	} else {
 		// TODO: получить дефолтный проект из конфига/контекста
 		// Для демо: используем фиксированный UUID

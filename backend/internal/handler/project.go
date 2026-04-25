@@ -27,16 +27,17 @@ func NewProjectHandler(projectRepo repository.ProjectRepository, userRepo reposi
 	}
 }
 
-// @Summary      Create a new project
-// @Tags         projects
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        request body model.Project true "Project data"
-// @Success      201  {object}  model.Project
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Router       /api/projects [post]
+// @Summary		Create a new project
+// @Description	Create a new project with the given name and description
+// @Tags			projects
+// @Accept			json
+// @Produce		json
+// @Param			request	body		model.ProjectInput	true	"Project creation data"
+// @Success		201		{object}	model.Project
+// @Failure		400		{object}	map[string]string	"Invalid request body"
+// @Failure		401		{object}	map[string]string	"Unauthorized"
+// @Failure		500		{object}	map[string]string	"Internal server error"
+// @Router			/api/projects [post]
 func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -92,13 +93,14 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(input)
 }
 
-// @Summary      Get all projects
-// @Tags         projects
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {array}   model.Project
-// @Failure      401  {object}  map[string]string
-// @Router       /api/projects [get]
+// @Summary		Get all projects
+// @Description	Get a list of all projects accessible by the user
+// @Tags			projects
+// @Produce		json
+// @Success		200	{array}		model.Project
+// @Failure		401	{object}	map[string]string	"Unauthorized"
+// @Failure		500	{object}	map[string]string	"Internal server error"
+// @Router			/api/projects [get]
 func (h *ProjectHandler) GetProjects(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -128,17 +130,17 @@ func (h *ProjectHandler) GetProjects(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(projects)
 }
 
-// @Summary      Get a project by ID
-// @Tags         projects
-// @Produce      json
-// @Security     BearerAuth
-// @Param        project_id path int true "Project ID"
-// @Success      200  {object}  model.Project
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /api/projects/{project_id} [get]
-func (h *ProjectHandler) GetProject(w http.ResponseWriter, r *http.Request) {
+// @Summary		Get project by ID
+// @Description	Get a specific project by its UUID
+// @Tags			projects
+// @Produce		json
+// @Param			id	path		string	true	"Project UUID"
+// @Success		200	{object}	model.Project
+// @Failure		400	{object}	map[string]string	"Invalid project ID"
+// @Failure		404	{object}	map[string]string	"Project not found"
+// @Failure		500	{object}	map[string]string	"Internal server error"
+// @Router			/api/projects/{id} [get]
+func (h *ProjectHandler) GetProjectById(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -167,19 +169,19 @@ func (h *ProjectHandler) GetProject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(project)
 }
 
-// @Summary      Update a project
-// @Tags         projects
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        project_id path int true "Project ID"
-// @Param        request body model.Project true "Project data"
-// @Success      200  {object}  model.Project
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /api/projects/{project_id} [put]
+// @Summary		Update project
+// @Description	Update an existing project
+// @Tags			projects
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string				true	"Project UUID"
+// @Param			request	body		model.ProjectInput	true	"Project update data"
+// @Success		200		{object}	model.Project
+// @Failure		400		{object}	map[string]string	"Invalid request"
+// @Failure		403		{object}	map[string]string	"Forbidden"
+// @Failure		404		{object}	map[string]string	"Project not found"
+// @Failure		500		{object}	map[string]string	"Internal server error"
+// @Router			/api/projects/{id} [put]
 func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -217,16 +219,17 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(input)
 }
 
-// @Summary      Delete a project
-// @Tags         projects
-// @Produce      json
-// @Security     BearerAuth
-// @Param        project_id path int true "Project ID"
-// @Success      204
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Router       /api/projects/{project_id} [delete]
+// @Summary		Delete project
+// @Description	Delete a project by its UUID
+// @Tags			projects
+// @Produce		json
+// @Param			id	path	string	true	"Project UUID"
+// @Success		204	"No content"
+// @Failure		400	{object}	map[string]string	"Invalid project ID"
+// @Failure		403	{object}	map[string]string	"Forbidden"
+// @Failure		404	{object}	map[string]string	"Project not found"
+// @Failure		500	{object}	map[string]string	"Internal server error"
+// @Router			/api/projects/{id} [delete]
 func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -252,16 +255,17 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// @Summary      Get project members
-// @Tags         projects
-// @Produce      json
-// @Security     BearerAuth
-// @Param        project_id path int true "Project ID"
-// @Success      200  {array}   model.ProjectMember
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string
-// @Router       /api/projects/{project_id}/members [get]
-func (h *ProjectHandler) GetMembers(w http.ResponseWriter, r *http.Request) {
+// @Summary		Get project members
+// @Description	Get all members of a project
+// @Tags			projects
+// @Produce		json
+// @Param			id	path		string	true	"Project UUID"
+// @Success		200	{array}		model.ProjectMember
+// @Failure		400	{object}	map[string]string	"Invalid project ID"
+// @Failure		404	{object}	map[string]string	"Project not found"
+// @Failure		500	{object}	map[string]string	"Internal server error"
+// @Router			/api/projects/{id}/members [get]
+func (h *ProjectHandler) GetProjectMembers(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -290,19 +294,20 @@ func (h *ProjectHandler) GetMembers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(members)
 }
 
-// @Summary      Add a member to project
-// @Tags         projects
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        project_id path int true "Project ID"
-// @Param        request body AddMemberInput true "Member data"
-// @Success      201  {object}  model.ProjectMember
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string
-// @Router       /api/projects/{project_id}/members [post]
-func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
+// @Summary		Add project member
+// @Description	Add a new member to a project
+// @Tags			projects
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string	true	"Project UUID"
+// @Param			request	body		object	true	"Member data {user_id: string, role: string}"
+// @Success		201		{object}	model.ProjectMember
+// @Failure		400		{object}	map[string]string	"Invalid request"
+// @Failure		403		{object}	map[string]string	"Forbidden"
+// @Failure		404		{object}	map[string]string	"Project not found"
+// @Failure		500		{object}	map[string]string	"Internal server error"
+// @Router			/api/projects/{id}/members [post]
+func (h *ProjectHandler) AddProjectMember(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -364,19 +369,20 @@ func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(newMember)
 }
 
-// @Summary      Update member role
-// @Tags         projects
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        project_id path int true "Project ID"
-// @Param        user_id path int true "User ID"
-// @Param        request body UpdateRoleInput true "New role"
-// @Success      200  {object}  model.ProjectMember
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string
-// @Router       /api/projects/{project_id}/members/{user_id} [put]
+// @Summary		Update member role
+// @Description	Update a member's role in a project
+// @Tags			projects
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string	true	"Project UUID"
+// @Param			userId	path		string	true	"User UUID"
+// @Param			request	body		object	true	"Role data {role: string}"
+// @Success		200		{object}	model.ProjectMember
+// @Failure		400		{object}	map[string]string	"Invalid request"
+// @Failure		403		{object}	map[string]string	"Forbidden"
+// @Failure		404		{object}	map[string]string	"Member not found"
+// @Failure		500		{object}	map[string]string	"Internal server error"
+// @Router			/api/projects/{id}/members/{userId} [put]
 func (h *ProjectHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -421,16 +427,18 @@ func (h *ProjectHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// @Summary      Remove member from project
-// @Tags         projects
-// @Produce      json
-// @Security     BearerAuth
-// @Param        project_id path int true "Project ID"
-// @Param        user_id path int true "User ID"
-// @Success      204
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string
-// @Router       /api/projects/{project_id}/members/{user_id} [delete]
+// @Summary		Remove project member
+// @Description	Remove a member from a project
+// @Tags			projects
+// @Produce		json
+// @Param			id		path	string	true	"Project UUID"
+// @Param			userId	path	string	true	"User UUID"
+// @Success		204		"No content"
+// @Failure		400		{object}	map[string]string	"Invalid ID"
+// @Failure		403		{object}	map[string]string	"Forbidden"
+// @Failure		404		{object}	map[string]string	"Member not found"
+// @Failure		500		{object}	map[string]string	"Internal server error"
+// @Router			/api/projects/{id}/members/{userId} [delete]
 func (h *ProjectHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

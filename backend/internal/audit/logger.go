@@ -112,7 +112,7 @@ func (l *Logger) Log(
 	}
 
 	// Шаг 6: Собираем данные для записи
-	var actorID *uuid.UUID // TODO
+	var actorID *uuid.UUID
 	userEmail := "system"
 	userName := "system"
 

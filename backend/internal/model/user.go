@@ -1,7 +1,6 @@
 package model
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,23 +24,23 @@ type AuthResponse struct {
 }
 
 type User struct {
-	ID                   uuid.UUID     `json:"id"`
-	Email                string        `json:"email"`
-	Name                 string        `json:"name"`
-	PasswordHash         string        `json:"-"`
-	IsActive             bool          `json:"is_active"`
-	DeletedAt            sql.NullTime  `json:"deveted_at,omitempty"`
-	DeletedBy            sql.NullInt64 `json:"-"`
-	TokenVersion         int           `json:"-"`
-	RequirePasswordReset bool          `json:"-"`
-	ReactivatedAt        sql.NullTime  `json:"-"`
-	ReactivatedBy        sql.NullInt64 `json:"-"`
-	CreatedAt            time.Time     `json:"created_at"`
-	LastLogin            sql.NullTime  `json:"last_login,omitempty"`
+	ID                   uuid.UUID `json:"id"`
+	Email                string    `json:"email"`
+	Name                 string    `json:"name"`
+	PasswordHash         string    `json:"-"`
+	IsActive             bool      `json:"is_active"`
+	DeletedAt            time.Time `json:"deveted_at,omitempty"`
+	DeletedBy            uuid.UUID `json:"-"`
+	TokenVersion         int       `json:"-"`
+	RequirePasswordReset bool      `json:"-"`
+	ReactivatedAt        time.Time `json:"-"`
+	ReactivatedBy        uuid.UUID `json:"-"`
+	CreatedAt            time.Time `json:"created_at"`
+	LastLogin            time.Time `json:"last_login,omitempty"`
 }
 
 func (u *User) IsDeleted() bool {
-	return u.DeletedAt.Valid
+	return u.DeletedAt != time.Time{}
 }
 
 func (u *User) CanLogin() bool {

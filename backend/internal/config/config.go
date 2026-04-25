@@ -212,7 +212,7 @@ func Load() (*Config, error) {
 			Driver:          viper.GetString("database.driver"),
 			Name:            viper.GetString("database.name"),
 			Host:            viper.GetString("database.host"),
-			Port:            viper.GetInt("database.port"), // 👈 Исправлено: был GetString
+			Port:            viper.GetInt("database.port"),
 			User:            viper.GetString("database.user"),
 			Password:        getEnv("DB_PASSWORD", viper.GetString("database.password")),
 			SSLMode:         viper.GetString("database.sslmode"),
@@ -221,7 +221,7 @@ func Load() (*Config, error) {
 			ConnMaxLifetime: viper.GetDuration("database.conn_max_lifetime"),
 		},
 		Server: ServerConfig{
-			Port:            viper.GetInt("server.port"), // 👈 Исправлено: был GetString
+			Port:            viper.GetInt("server.port"),
 			ReadTimeout:     viper.GetDuration("server.read_timeout"),
 			WriteTimeout:    viper.GetDuration("server.write_timeout"),
 			ShutdownTimeout: viper.GetDuration("server.shutdown_timeout"),
@@ -231,7 +231,7 @@ func Load() (*Config, error) {
 			JWTSecret:         getEnv("JWT_SECRET", viper.GetString("auth.jwt_secret")),
 			JWTPrivateKey:     getEnv("JWT_PRIVATE_KEY", viper.GetString("auth.jwt_private_key")),
 			JWTPublicKey:      getEnv("JWT_PUBLIC_KEY", viper.GetString("auth.jwt_public_key")),
-			JWTKeyID:          viper.GetString("auth.jwt_key_id"), // 👈 Исправлено: был jet_key_id
+			JWTKeyID:          viper.GetString("auth.jwt_key_id"),
 			JWTExpiry:         viper.GetDuration("auth.jwt_expiry"),
 			JWTRefreshExpiry:  viper.GetDuration("auth.jwt_refresh_expiry"),
 			CookieSecure:      viper.GetBool("auth.cookie_secure"),

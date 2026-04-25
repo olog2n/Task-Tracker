@@ -2,7 +2,7 @@ database:
   driver: sqlite  # sqlite | postgres | mysql
 
   # SQLite 
-  name: /data/tracker.db # (tracker.db)
+  name: ./data/tracker.db # (tracker.db)
   
   # PostgreSQL/MySQL
   host: localhost
@@ -16,14 +16,14 @@ database:
   conn_max_lifetime: 1h
 
 server:
-  port: 8080
+  port: 6969
   read_timeout: 10s
   write_timeout: 10s
   shutdown_timeout: 5s
 
 auth:
   jwt_algorithm: "HS256" # HS256 | ES256 | RS256
-  jwt_secret: ""      # .env
+  jwt_secret: "hWWDyfOjhNLBSIQ4vt4abLtDUZ9YAPA3aFotOl3m+r4="      # .env
   jwt_private_key: "" # .env
   jwt_public_key: "" # .env
   jwt_key_id: "key-1"
