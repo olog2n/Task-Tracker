@@ -1,22 +1,44 @@
-# Sukno Tracker MVP
+# frontend
 
-## Быстрый старт
-```bash
-# 1. Клонировать репо
-git clone <repo>
+This template should help get you started developing with Vue 3 in Vite.
 
-# 2. Создать .env
-cp .env.example .env
-# Отредактировать JWT_SECRET
+## Recommended IDE Setup
 
-# 3. Собрать
-docker-compose build
+[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
 
-# 4. Запустить всё
-docker-compose up -d
+## Recommended Browser Setup
 
-# 5. Открыть
-# 👉 http://localhost:3000
+- Chromium-based browsers (Chrome, Edge, Brave, etc.):
+  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
+  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
+- Firefox:
+  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
+  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
 
-## P.S.
-# Где взять JWT_SECRET, обратите внимание на backend/scripts, там находится удобный скрипт для создания ключей, затем вам нужно будет лишь отредактировать .env
+## Customize configuration
+
+See [Vite Configuration Reference](https://vite.dev/config/).
+
+## Project Setup
+
+```sh
+npm install
+```
+
+### Compile and Hot-Reload for Development
+
+```sh
+npm run dev
+```
+
+### Compile and Minify for Production
+
+```sh
+npm run build
+```
+
+### Lint with [ESLint](https://eslint.org/)
+
+```sh
+npm run lint
+```
