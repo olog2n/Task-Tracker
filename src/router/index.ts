@@ -38,19 +38,37 @@ const router = createRouter({
 })
 
 // 🔐 Глобальный guard
-router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('auth_token')
+// router.beforeEach((to, from, next) => {
+//   const isAuthenticated = !!localStorage.getItem('auth_token')
 
-  // Если маршрут требует авторизации, а токена нет → login
+//   // Если маршрут требует авторизации, а токена нет → login
+//   if (to.meta.requiresAuth && !isAuthenticated) {
+//     return next({ path: '/login', query: { redirect: to.fullPath } })
+//   }
+
+//   // Если гостевой маршрут, а пользователь уже вошёл → dashboard
+//   if (to.meta.guest && isAuthenticated) {
+//     return next('/projects/default/dashboard') // 🔧 Замени на реальный redirect или первый проект
+//   }
+
+//   next()
+// })
+
+router.beforeEach((to, from, next) => {
+  // 🔧 ДЕМО-РЕЖИМ: всегда пропускаем
+  const USE_MOCKS = true
+  if (USE_MOCKS) return next()
+
+  // Реальная логика (раскомментируй позже)
+  /*
+  const isAuthenticated = !!localStorage.getItem('auth_token')
   if (to.meta.requiresAuth && !isAuthenticated) {
     return next({ path: '/login', query: { redirect: to.fullPath } })
   }
-
-  // Если гостевой маршрут, а пользователь уже вошёл → dashboard
   if (to.meta.guest && isAuthenticated) {
-    return next('/projects/default/dashboard') // 🔧 Замени на реальный redirect или первый проект
+    return next('/projects/default/dashboard')
   }
-
+  */
   next()
 })
 

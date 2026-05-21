@@ -41,18 +41,32 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-// 🔧 Подключи vue-query здесь для реальных запросов
-// const { data: tasks } = useQuery({ queryKey: ['tasks', route.params.projectId], queryFn: () => tasksApi.list(...) })
+import api from '@/api/client'
 
-const route = useRoute()
-const stats = ref({ closed: 12, remaining: 5, daysLeft: 8 })
-const urgentTasks = ref([
-  { id: 1, title: 'Обновить документацию API', due_date: new Date().toISOString() },
-  { id: 2, title: 'Исправить таймаут авторизации', due_date: new Date(Date.now() + 7200000).toISOString() },
-])
+// 🔧 1. Интерфейсы для строгой типизации
+interface DashboardStats {
+  closed: number
+  remaining: number
+  daysLeft: number
+}
 
-const getUrgencyLabel = (dateStr: string) => {
+interface UrgentTask {
+  id: string
+  title: string
+  due_date: string
+}
+
+interface DashboardPayload {
+  stats: DashboardStats
+  urgentTasks: UrgentTask[]
+}
+
+// 🔧 2. Явная типизация ref (избегает never[])
+const stats = ref<DashboardStats>({ closed: 0, remaining: 0, daysLeft: 0 })
+const urgentTasks = ref<UrgentTask[]>([])
+
+// 🔧 3. Хелперы вынесены на верхний уровень (видны в шаблоне)
+const getUrgencyLabel = (dateStr: string): string => {
   const diff = new Date(dateStr).getTime() - Date.now()
   const hours = diff / 3600000
   if (diff < 0) return 'Overdue'
@@ -61,8 +75,17 @@ const getUrgencyLabel = (dateStr: string) => {
   return `Expires in ${Math.ceil(hours)}h`
 }
 
-const getUrgencyClass = (dateStr: string) => {
+const getUrgencyClass = (dateStr: string): string => {
   const diff = new Date(dateStr).getTime() - Date.now()
   return diff < 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
 }
+
+onMounted(async () => {
+  // 🔧 Запрос с дженериком для авто-типизации ответа
+  const { data } = await api.get<DashboardPayload>('/dashboard')
+  if (data) {
+    stats.value = data.stats
+    urgentTasks.value = data.urgentTasks
+  }
+})
 </script>
