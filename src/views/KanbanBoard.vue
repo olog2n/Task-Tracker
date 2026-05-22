@@ -13,7 +13,6 @@
             {{ col.title }}
             <span class="text-xs bg-gray-200 px-2 py-0.5 rounded-full">{{ col.tasks.length }}</span>
           </h3>
-
           <!-- DROPPABLE ЗОНА (нативный HTML5 DnD для MVP) -->
           <div
             class="flex-1 space-y-2 overflow-y-auto pr-1 min-h-[100px]"
@@ -26,6 +25,7 @@
               class="bg-white p-3 rounded-md shadow-sm border border-gray-200 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
               draggable="true"
               @dragstart="handleDragStart($event, task)"
+              @click="openTaskModal(task)"
             >
               <div class="flex justify-between items-start mb-2">
                 <span class="text-sm font-medium text-gray-800">{{ task.title }}</span>
@@ -46,11 +46,27 @@
       </div>
     </div>
   </div>
+  <!---Модалка задачи-->
+  <TaskDetailModal
+    v-model="isTaskModalOpen"
+    :task="selectedTask"
+    :project-id="currentProjectId"
+    @close="isTaskModalOpen = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/client'
+import TaskDetailModal from './TaskDetailModal.vue' // Форма задачи
+import { useRoute } from 'vue-router'
+
+
+// Модалка задачи
+const isTaskModalOpen = ref(false)
+const selectedTask = ref<Task | null>(null)
+const route = useRoute()
+const currentProjectId = computed(() => route.params.projectId as string)
 
 // 🔧 1. Интерфейсы для строгой типизации
 export interface Task {
@@ -143,4 +159,10 @@ onMounted(async () => {
   const { data } = await api.get<Task[]>('/tasks')
   allTasks.value = data
 })
+
+// 🔧 7. Модалка
+const openTaskModal = (task: any) => {
+  selectedTask.value = task
+  isTaskModalOpen.value = true
+}
 </script>

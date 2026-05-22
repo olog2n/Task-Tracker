@@ -32,6 +32,14 @@ type Task = {
   urgency: string,
   assignee: string,
   points: number
+  comments?: Comment[]
+}
+
+export interface Comment {
+  id: string,
+  text: string,
+  assignee: string
+  date: string
 }
 
 export const MOCK_TASKS: Task[] = [
@@ -41,7 +49,27 @@ export const MOCK_TASKS: Task[] = [
     status: 'done',
     urgency: 'high',
     assignee: 'Алексей',
-    points: 3
+    points: 3,
+    comments: [
+      {
+        id: 'c-1',
+        text: 'Не актуально',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-2',
+        text: 'А что если тут будет ну оооченннь много текса?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-3',
+        text: 'А что если тут будет ну оооченннь много текса?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      }
+    ]
   },
   {
     id: 't-2',
