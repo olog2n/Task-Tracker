@@ -59,13 +59,19 @@ export const MOCK_TASKS: Task[] = [
       },
       {
         id: 'c-2',
-        text: 'А что если тут будет ну оооченннь много текса?',
+        text: 'А что если тут будет ну оооченннь много текста?',
         assignee: 'Алексей',
         date: new Date().toISOString()
       },
       {
         id: 'c-3',
-        text: 'А что если тут будет ну оооченннь много текса?',
+        text: 'А что если тут будет ну оооченннь много текста?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-4',
+        text: 'Вопрос хороший, я пока не подумал насчет этого дела',
         assignee: 'Алексей',
         date: new Date().toISOString()
       }
@@ -77,7 +83,33 @@ export const MOCK_TASKS: Task[] = [
     status: 'in-progress',
     urgency: 'medium',
     assignee: 'Мария',
-    points: 5
+    points: 5,
+    comments: [
+      {
+        id: 'c-1',
+        text: 'Не актуально',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-2',
+        text: 'А что если тут будет ну оооченннь много текста?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-3',
+        text: 'А что если тут будет ну оооченннь много текста?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-4',
+        text: 'Вопрос хороший, я пока не подумал насчет этого дела',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      }
+    ]
   },
   {
     id: 't-3',
@@ -85,7 +117,33 @@ export const MOCK_TASKS: Task[] = [
     status: 'review',
     urgency: 'critical',
     assignee: 'Алексей',
-    points: 2
+    points: 2,
+    comments: [
+      {
+        id: 'c-1',
+        text: 'Не актуально',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-2',
+        text: 'А что если тут будет ну оооченннь много текста?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-3',
+        text: 'А что если тут будет ну оооченннь много текста?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-4',
+        text: 'Вопрос хороший, я пока не подумал насчет этого дела',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      }
+    ]
   },
   {
     id: 't-4',
@@ -93,7 +151,33 @@ export const MOCK_TASKS: Task[] = [
     status: 'backlog',
     urgency: 'low',
     assignee: 'null',
-    points: 8
+    points: 8,
+    comments: [
+      {
+        id: 'c-1',
+        text: 'Не актуально',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-2',
+        text: 'А что если тут будет ну оооченннь много текста?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-3',
+        text: 'А что если тут будет ну оооченннь много текста?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-4',
+        text: 'Вопрос хороший, я пока не подумал насчет этого дела',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      }
+    ]
   },
   {
     id: 't-5',
@@ -101,7 +185,33 @@ export const MOCK_TASKS: Task[] = [
     status: 'in-progress',
     urgency: 'high',
     assignee: 'Иван',
-    points: 13
+    points: 13,
+    comments: [
+      {
+        id: 'c-1',
+        text: 'Не актуально',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-2',
+        text: 'А что если тут будет ну оооченннь много текста?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-3',
+        text: 'А что если тут будет ну оооченннь много текста?',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      },
+      {
+        id: 'c-4',
+        text: 'Вопрос хороший, я пока не подумал насчет этого дела',
+        assignee: 'Алексей',
+        date: new Date().toISOString()
+      }
+    ]
   },
 ]
 
