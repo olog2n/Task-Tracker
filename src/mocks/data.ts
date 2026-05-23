@@ -1,11 +1,15 @@
 // src/mocks/data.ts
 
-export const MOCK_USER = {
-  id: 'u-1',
-  name: 'Алексей Разработчик',
-  email: 'alex@taskengine.io',
-  avatar: null,
-  default_project_id: 'proj-1'
+import { AuthUser } from "@/api/auth"
+
+export const MOCK_USER: AuthUser = {
+  id: 'user_1',
+  name: 'Алексей',
+  surname: 'Иванов',
+  login: 'i.alex',
+  email: 'i.alex@gmail.com',
+  department: 'Отдел разработки',
+  avatar: '/user.jpg',
 }
 
 export const MOCK_PROJECTS = [

@@ -15,6 +15,7 @@ const toResponse = <T>(data: T, status = 200) => ({
 export const mockApi = {
   get: async (url: string) => {
     await delay(400)
+    if (url.includes('/auth/profile')) return toResponse(MOCK_USER)
     if (url.includes('/tasks')) return toResponse(MOCK_TASKS)
     if (url.includes('/dashboard')) return toResponse(MOCK_DASHBOARD)
     if (url.includes('/projects')) return toResponse(MOCK_PROJECTS)
@@ -38,7 +39,15 @@ export const mockApi = {
   patch: async (url: string, data?: any) => {
     await delay(300)
     console.log('📥 [MOCK PATCH]', url, data)
-    return toResponse({ success: true })
+  
+    // 👇 НОВОЕ: если обновляют профиль — возвращаем обновлённого пользователя
+    if (url.includes('/auth/profile')) {
+      // "Сливаем" старые данные с новыми из запроса
+      const updatedUser = { ...MOCK_USER, ...data }
+      return toResponse(updatedUser)
+  }
+  
+  return toResponse({ success: true })
   },
 
   put: async (url: string, data?: any) => {

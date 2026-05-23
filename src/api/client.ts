@@ -1,6 +1,9 @@
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios'
 // import router from '@/router'
 import { mockApi } from '@/mocks/adapter'
+import { v } from 'vue-router/dist/router-CWoNjPRp.mjs'
+import { record } from 'zod'
+import { access } from 'node:fs'
 
 const USE_MOCKS = true
 
@@ -13,23 +16,33 @@ export type ApiResponse<T = any> = {
 }
 
 const api = {
-  get: <T>(url: string, config?: AxiosRequestConfig) =>
-    USE_MOCKS ? (mockApi.get(url) as Promise<ApiResponse<T>>) : axios.get<T>(url, config),
+  get: <T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+    USE_MOCKS 
+      ? (mockApi.get(url) as Promise<ApiResponse<T>>) 
+      : axios.get<T>(url, config).then(normalizeResponse),
 
-  post: <T>(url: string, data?: any, config?: AxiosRequestConfig) =>
-    USE_MOCKS ? (mockApi.post(url, data) as Promise<ApiResponse<T>>) : axios.post<T>(url, data, config),
+  post: <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+    USE_MOCKS 
+      ? (mockApi.post(url, data) as Promise<ApiResponse<T>>) 
+      : axios.post<T>(url, data, config).then(normalizeResponse),
 
-  patch: <T>(url: string, data?: any, config?: AxiosRequestConfig) =>
-    USE_MOCKS ? (mockApi.patch(url, data) as Promise<ApiResponse<T>>) : axios.patch<T>(url, data, config),
+  patch: <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+    USE_MOCKS 
+      ? (mockApi.patch(url, data) as Promise<ApiResponse<T>>) 
+      : axios.patch<T>(url, data, config).then(normalizeResponse),
 
-  put: <T>(url: string, data?: any, config?: AxiosRequestConfig) =>
-    USE_MOCKS ? (mockApi.put(url, data) as Promise<ApiResponse<T>>) : axios.put<T>(url, data, config),
+  put: <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+    USE_MOCKS 
+      ? (mockApi.put(url, data) as Promise<ApiResponse<T>>) 
+      : axios.put<T>(url, data, config).then(normalizeResponse),
 
-  delete: <T>(url: string, config?: AxiosRequestConfig) =>
-    USE_MOCKS ? (mockApi.delete(url) as Promise<ApiResponse<T>>) : axios.delete<T>(url, config),
+  delete: <T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+    USE_MOCKS 
+      ? (mockApi.delete(url) as Promise<ApiResponse<T>>) 
+      : axios.delete<T>(url, config).then(normalizeResponse),
 
   interceptors: axios.interceptors
-}
+};
 
 // const api = axios.create({
 //   get: (url: string, config?: any) => USE_MOCKS ? mockApi.get(url) : axios.get(url, config),
@@ -71,5 +84,30 @@ if (USE_MOCKS && !localStorage.getItem('auth_token')) {
 //     return Promise.reject(error)
 //   }
 // )
+
+// Приводит любой ответ к единому формату ApiResponse<T>
+function normalizeResponse<T>(res: AxiosResponse<T> | ApiResponse<T>): ApiResponse<T> {
+  // Если это уже ответ от мока (у Axios всегда есть поле config)
+  if (!('config' in res)) {
+    return res as ApiResponse<T>;
+  }
+
+  const axiosRes = res as AxiosResponse<T>;
+  
+  // Безопасно собираем заголовки в простой Record<string, string>
+  const normalizedHeaders: Record<string, string> = {};
+  if (axiosRes.headers) {
+    for (const [key, value] of Object.entries(axiosRes.headers)) {
+      normalizedHeaders[key] = typeof value === 'string' ? value : String(value ?? '');
+    }
+  }
+
+  return {
+    data: axiosRes.data,
+    status: axiosRes.status,
+    statusText: axiosRes.statusText || '',
+    headers: normalizedHeaders,
+  };
+}
 
 export default api

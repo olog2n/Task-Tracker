@@ -27,12 +27,17 @@
         </RouterLink>
       </nav>
 
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-500">{{ mockUser.name }}</span>
-        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
-          {{ mockUser.initials }}
-        </div>
-      </div>
+<RouterLink :to="{ name: 'Profile' }" class="flex items-center gap-2 hover:opacity-80 transition">
+  <img 
+    v-if="user?.avatar" 
+    :src="user.avatar + '?v=' + Date.now()"
+    class="w-8 h-8 rounded-full object-cover"
+  />
+  <div v-else class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-medium">
+    {{ user?.name?.[0] }}{{ user?.surname?.[0] }}
+  </div>
+  <span class="text-sm font-medium">{{ user?.name }} {{ user?.surname }}</span>
+</RouterLink>
     </header>
 
     <!-- Main Content -->
@@ -45,9 +50,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
+
 
 const route = useRoute()
 const router = useRouter()
+const { user, logout } = useAuth()
 
 const mockProjects = [
   { id: 'proj-1', name: 'Project Aurora' },

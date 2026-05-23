@@ -8,6 +8,8 @@ import Dashboard from '@/views/Dashboard.vue'
 import KanbanBoard from '@/views/KanbanBoard.vue'
 import SprintPlanner from '@/views/SprintPlanner.vue'
 import UnderConstruction from '@/views/UnderConstruction.vue'
+import ProfileView from '@/views/ProfileView.vue'
+import { request } from 'node:http'
 
 const routes: RouteRecordRaw[] = [
   // 🔹 Гостевые маршруты (без защиты)
@@ -26,6 +28,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'sprints/plan', component: SprintPlanner, meta: { title: 'Планирование спринта' } },
       { path: 'processes/builder', component: UnderConstruction, meta: { title: 'Конструктор процессов' } },
       { path: 'admin', component: UnderConstruction, meta: { title: 'Админ-панель' } },
+      { path: 'profile', name: 'Profile', component: ProfileView, meta: { title: 'Профиль', requestAuth: true }},
     ],
   },
   // Fallback
