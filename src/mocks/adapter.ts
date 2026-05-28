@@ -23,18 +23,49 @@ export const mockApi = {
     return toResponse(null)
   },
 
-  post: async (url: string, data?: any) => {
-    await delay(600)
-    console.log('📥 [MOCK POST]', url, data)
-    if (url.includes('/auth/login')) {
-      return toResponse({
-        token: 'fake-jwt-token',
-        user: MOCK_USER
-      })
-    }
-    if (url.includes('/sprints')) return toResponse({ id: 'sprint-new-1', ...data })
-    return toResponse({ success: true })
-  },
+post: async (url: string, data?: any) => {
+  await delay(600);
+  console.log('📥 [MOCK POST]', url, data);
+
+  if (url.includes('/auth/login')) {
+    // ... твой код логина ...
+    return toResponse({ token: 'mock-token', user: { id: 'u-1', name: 'Admin' } });
+  }
+
+  // ✅ Создание задачи
+  if (url.includes('/tasks') && !url.includes('/transitions')) {
+    const newId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const payload = data || {};
+    
+    const newTask = {
+      id: newId,
+      title: payload.title,
+      project_id: payload.project_id,
+      description: payload.description || null,
+      classification_id: payload.classification_id || null,
+      urgency_id: payload.urgency_id || null,
+      due_date: payload.due_date || null,
+      tags: payload.tags || [],
+      // Бэкенд проставляет автоматически (имитируем)
+      process_id: '00000000-0000-0000-0000-000000000100',
+      current_status_id: '00000000-0000-0000-0000-000000000001',
+      creator_id: 'u-1',
+      created_at: new Date().toISOString(),
+      assignee_id: null,
+      sprint_id: null,
+      capacity: 0,
+      parent_id: null,
+      comments_container_id: `cc-${newId}`,
+      attachments_container_id: `ac-${newId}`,
+      updated_at: new Date().toISOString(),
+    };
+
+    return toResponse(newTask, 201);
+  }
+
+  if (url.includes('/sprints')) return toResponse({ id: 'sprint-new', ...data });
+  return toResponse({ success: true });
+},
 
   patch: async (url: string, data?: any) => {
     await delay(300)

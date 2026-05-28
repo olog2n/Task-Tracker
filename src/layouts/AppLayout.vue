@@ -13,7 +13,16 @@
           <option disabled value="">Выберите проект</option>
           <option v-for="p in mockProjects" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
+              <button 
+        v-if="currentProjectId"
+        @click="openCreateModal"
+        class="class=ml-2 px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition"
+        title="Создать задачу (Ctrl+K)"
+>
+        Создать задачу
+      </button>
       </div>
+
 
       <nav class="flex gap-2">
         <RouterLink
@@ -44,13 +53,21 @@
     <main class="flex-1 p-6 overflow-auto">
       <RouterView :key="$route.fullPath" />
     </main>
+    <CreateTaskModal 
+      :open="isCreateModalOpen"
+      :project-id="currentProjectId || ''"
+      @close="closeCreateModal"
+      @success="handleTaskCreated"
+  />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import type { Task } from '@/types'
+import CreateTaskModal from '@/views/CreateTaskModal.vue'
 
 
 const route = useRoute()
@@ -63,7 +80,8 @@ const mockProjects = [
 ]
 const mockUser = { name: 'Иван Петров', initials: 'ИП' }
 
-const currentProjectId = ref(route.params.projectId as string)
+const currentProjectId = ref<string>((route.params.projectId as string) || '')
+
 
 watch(() => route.params.projectId, (newId) => {
   currentProjectId.value = newId as string
@@ -80,4 +98,33 @@ const navLinks = [
   { to: 'board', label: 'Kanban' },
   { to: 'sprints/plan', label: 'Спринты' },
 ]
+
+
+
+const isCreateModalOpen = ref(false)
+
+const openCreateModal = () => {
+  isCreateModalOpen.value = true
+}
+
+const closeCreateModal = () => {
+  isCreateModalOpen.value = false
+}
+
+const handleTaskCreated = (task: Task) => {
+  console.log('✅ Задача создана:', task)
+  closeCreateModal()
+  // TODO: здесь позже добавим toast и обновление Kanban
+}
+
+onMounted(() => {
+  const handler = (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault()
+      if (currentProjectId.value) openCreateModal()
+    }
+  }
+  window.addEventListener('keydown', handler)
+  return () => window.removeEventListener('keydown', handler)
+})
 </script>
