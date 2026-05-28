@@ -28,8 +28,10 @@ post: async (url: string, data?: any) => {
   console.log('📥 [MOCK POST]', url, data);
 
   if (url.includes('/auth/login')) {
-    // ... твой код логина ...
-    return toResponse({ token: 'mock-token', user: { id: 'u-1', name: 'Admin' } });
+    return toResponse({ 
+      token: 'mock-token', 
+      user: MOCK_USER 
+    });
   }
 
   // ✅ Создание задачи
