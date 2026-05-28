@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import type { Task } from '@/types'
@@ -81,7 +81,6 @@ const mockProjects = [
   { id: 'proj-1', name: 'Project Aurora' },
   { id: 'proj-2', name: 'Internal Tools' }
 ]
-const mockUser = { name: 'Иван Петров', initials: 'ИП' }
 
 const currentProjectId = ref<string>((route.params.projectId as string) || '')
 

@@ -5,6 +5,25 @@
       <h3 class="text-lg font-semibold mb-4">Создать задачу</h3>
       
       <form @submit.prevent="submit" class="space-y-4">
+        <!-- Проект (обязательно) -->
+        <div>
+          <label class="block text-sm font-medium mb-1">Проект *</label>
+          <select 
+            v-model="form.project_id"
+            class="w-full border rounded px-3 py-2"
+            required
+          >
+            <option disabled value="">Выберите проект</option>
+            <option 
+              v-for="project in projects" 
+              :key="project.id" 
+              :value="project.id"
+            >
+              {{ project.name }}
+            </option>
+          </select>
+        </div>
+
         <!-- Название (обязательно) -->
         <div>
           <label class="block text-sm font-medium mb-1">Название *</label>
@@ -54,7 +73,7 @@
           <button 
             type="submit"
             class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            :disabled="loading || !form.title.trim()"
+            :disabled="loading || !form.title.trim() || !form.project_id"
           >
             {{ loading ? 'Создание...' : 'Создать' }}
           </button>
@@ -79,6 +98,13 @@ const emit = defineEmits<{
   (e: 'success', task: Task): void
 }>()
 
+const mockProjects = [
+  { id: 'proj-1', name: 'Project Aurora' },
+  { id: 'proj-2', name: 'Internal Tools' }
+]
+
+const projects = ref(mockProjects)
+
 const form = ref<TaskCreatePayload>({
   title: '',
   project_id: props.projectId,
@@ -89,8 +115,20 @@ const form = ref<TaskCreatePayload>({
 const loading = ref(false)
 const error = ref<string | null>(null)
 
+watch(() => props.open, (isOpen) => {
+  if (isOpen) {
+    form.value = {
+      title: '',
+      project_id: props.projectId,
+      description: '',
+      due_date: undefined,
+    }
+    error.value = null
+  }
+})
+
 const submit = async () => {
-  if (!form.value.title.trim()) return
+  if (!form.value.title.trim() || !form.value.project_id) return
   
   loading.value = true
   error.value = null
@@ -114,7 +152,12 @@ const submit = async () => {
 
 const close = () => {
   if (!loading.value) {
-    form.value = { title: '', project_id: props.projectId, description: '', due_date: undefined }
+    form.value = {
+      title: '',
+      project_id: props.projectId,
+      description: '',
+      due_date: undefined,
+    }
     error.value = null
     emit('close')
   }
